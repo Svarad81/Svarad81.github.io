@@ -8,7 +8,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -226,6 +225,12 @@
 
         .btn-modern:active {
             transform: translateY(0);
+        }
+
+        .btn-modern:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .btn-primary-modern {
@@ -488,6 +493,16 @@
             border: 1px solid #e2e8f0;
         }
 
+        .setup-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
         @media (max-width: 768px) {
             .main-container {
                 padding: 1rem;
@@ -532,18 +547,21 @@
                 </h1>
                 <p class="subtitle">Secure, Verified, and Transparent Democracy</p>
                 
+                <!-- Setup Notice -->
+               
+                
                 <div class="security-badges">
                     <span class="security-badge">
-                        <i class="fas fa-lock me-2"></i>Encrypted
+                        <i class="fas fa-cloud me-2"></i>Cloud Secured
                     </span>
                     <span class="security-badge">
                         <i class="fas fa-map-marker-alt me-2"></i>Geo-Verified
                     </span>
                     <span class="security-badge">
-                        <i class="fas fa-mobile-alt me-2"></i>OTP Secured
+                        <i class="fas fa-mobile-alt me-2"></i>One Vote Only
                     </span>
                     <span class="security-badge">
-                        <i class="fas fa-check-circle me-2"></i>Auditable
+                        <i class="fas fa-check-circle me-2"></i>Real-time Results
                     </span>
                 </div>
             </div>
@@ -577,7 +595,7 @@
                     </div>
                 </div>
 
-                <button class="btn-modern btn-primary-modern w-100" onclick="validateStep1()">
+                <button class="btn-modern btn-primary-modern w-100" onclick="validateStep1()" id="step1Btn">
                     <span id="step1BtnText">Continue to Verification</span>
                     <i id="step1Spinner" class="fas fa-spinner fa-spin ms-2 d-none"></i>
                 </button>
@@ -591,32 +609,6 @@
                     <div class="step-number" id="step2Number">2</div>
                     <h3 class="step-title">Mobile Verification</h3>
                 </div>
-                <div class="status-indicator status-info">
-  <i class="fas fa-info-circle me-3"></i>
-  <div>
-    <strong>Verification Status:</strong> Mobile number validated successfully<br>
-    <small>Number: +91 <span id="displayMobile"></span></small>
-  </div>
-</div>
-
-<!-- reCAPTCHA placeholder (must be present in DOM) -->
-<div id="recaptcha-container"></div>
-
-<!-- OTP input area (hidden until OTP sent) -->
-<div id="otpSection" class="d-none mt-3">
-  <div class="form-group">
-    <label class="form-label">Enter OTP</label>
-    <input type="tel" id="otpInput" class="form-control-modern" placeholder="Enter OTP">
-  </div>
-  <div class="d-flex gap-2">
-    <button class="btn-modern btn-primary-modern flex-fill" onclick="confirmOTP(document.getElementById('otpInput').value)">
-      Verify OTP
-    </button>
-    <button class="btn-modern btn-secondary-modern flex-fill" onclick="sendOTP('+91' + document.getElementById('displayMobile').textContent)">
-      Resend OTP
-    </button>
-  </div>
-</div>
 
                 <div class="status-indicator status-info">
                     <i class="fas fa-info-circle me-3"></i>
@@ -715,9 +707,10 @@
                         </div>
                         
                         <div class="d-flex gap-3 mt-3">
-                            <button class="btn-modern btn-success-modern flex-fill" onclick="confirmVote()">
+                            <button class="btn-modern btn-success-modern flex-fill" onclick="confirmVote()" id="confirmVoteBtn">
                                 <i class="fas fa-check me-2"></i>
-                                Confirm Vote
+                                <span id="confirmVoteBtnText">Confirm Vote</span>
+                                <i id="confirmVoteSpinner" class="fas fa-spinner fa-spin ms-2 d-none"></i>
                             </button>
                             <button class="btn-modern btn-danger-modern flex-fill" onclick="cancelVote()">
                                 <i class="fas fa-times me-2"></i>
@@ -765,7 +758,7 @@
                         <i class="fas fa-sync-alt me-3"></i>
                         <div>
                             <strong>Total Votes Cast:</strong> <span id="totalVotes">0</span><br>
-                            <small>Results update in real-time</small>
+                            <small>Results update in real-time from JSONBin</small>
                         </div>
                     </div>
                 </div>
@@ -773,104 +766,25 @@
                 <div id="resultsContainer" class="results-section">
                     <!-- Results will be populated here -->
                 </div>
+
+                <div class="text-center mt-4">
+                    <button class="btn-modern btn-primary-modern" onclick="updateResults()">
+                        <i class="fas fa-refresh me-2"></i>
+                        Refresh Results
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getDatabase, ref, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-  import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
-  // ---------- your firebase config ----------
-  const firebaseConfig = {
-    apiKey: "AIzaSyA0s9hT9qaaq_ijGYtXpAcJU2vo101v8RI",
-    authDomain: "blockchain-voting-system-a4ca3.firebaseapp.com",
-    databaseURL: "https://blockchain-voting-system-a4ca3-default-rtdb.firebaseio.com",
-    projectId: "blockchain-voting-system-a4ca3",
-    storageBucket: "blockchain-voting-system-a4ca3.firebasestorage.app",
-    messagingSenderId: "324833638126",
-    appId: "1:324833638126:web:55ce47d0727dfdf4c7a5ff",
-    measurementId: "G-DJFJ673JRR"
-  };
-
-  // ---------- initialize ----------
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-
-  // ---------- DB helper functions (available globally) ----------
-  window.checkIfVoted = async function(mobile) {
-    const snapshot = await get(ref(db, 'voters/' + mobile));
-    return snapshot.exists();
-  }
-
-  window.recordVote = async function(mobile, candidate, name) {
-    await set(ref(db, 'voters/' + mobile), { voted: true, name: name });
-    const candidateRef = ref(db, 'votes/' + candidate);
-    await runTransaction(candidateRef, current => (current || 0) + 1);
-  }
-
-  window.getVoteCounts = async function() {
-    const snapshot = await get(ref(db, 'votes'));
-    return snapshot.val() || {};
-  }
-
-  // ---------- reCAPTCHA + Phone Auth helpers ----------
-  window.initRecaptcha = function() {
-    // ensure DOM element exists before creating verifier
-    if (window.recaptchaVerifier) return;
-    const el = document.getElementById('recaptcha-container');
-    if (!el) {
-      console.warn('recaptcha-container not found in DOM');
-      return;
-    }
-    window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', { size: 'invisible' }, auth);
-    // render returns a Promise if you want to wait for it:
-    window.recaptchaVerifier.render().catch(()=>{/*ignore render errors*/});
-  }
-
-  window.sendOTP = async function(phoneNumber) {
-    try {
-      // ensure recaptcha is initialized
-      window.initRecaptcha();
-      if (!window.recaptchaVerifier) throw new Error('reCAPTCHA not initialized');
-
-      // send OTP
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-      window.confirmationResult = confirmationResult;
-
-      // show OTP UI
-      const otpSection = document.getElementById('otpSection');
-      if (otpSection) otpSection.classList.remove('d-none');
-
-      alert('OTP sent to ' + phoneNumber + '. (If using test number, use the test code configured in Firebase console.)');
-    } catch (err) {
-      console.error('sendOTP error', err);
-      alert('Error sending OTP: ' + (err.message || err));
-      // reset recaptcha if necessary
-      if (window.recaptchaVerifier && window.recaptchaVerifier.clear) try { window.recaptchaVerifier.clear(); } catch(e){}
-      window.recaptchaVerifier = null;
-    }
-  }
-
-  window.confirmOTP = async function(code) {
-    try {
-      if (!window.confirmationResult) throw new Error('No confirmation result. Request OTP first.');
-      const result = await window.confirmationResult.confirm(code);
-      // phone auth succeeded — you can optionally sign the user out of auth here or use `result.user` info
-      alert('Phone verified successfully!');
-      return result.user;
-    } catch (err) {
-      console.error('confirmOTP error', err);
-      alert('Invalid OTP or verification failed.');
-      throw err;
-    }
-  }
-
+    <script>
         // Configuration
-        const GEOFENCE_CENTER = { lat: 18.64508, lng: 73.75752 }; // New Delhi - Change as needed
+        const GEOFENCE_CENTER = { lat: 18.64683713259295, lng: 73.7568511188494}; // Ravet, pune - Change as needed
         const GEOFENCE_RADIUS = 500; // meters
+        
+        // JSONBin Configuration - Replace with your actual credentials
+        const JSONBIN_API_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; // Replace with your actual master key
+        const JSONBIN_BIN_ID = '68cd4571ae596e708ff3def9'; // Replace with your actual bin ID or leave empty to create new
         
         // Global variables
         let currentVoter = {
@@ -882,450 +796,473 @@
 
         let selectedCandidate = '';
 
-        // Firebase configuration (for demo, using localStorage)
-        let useFirebase = true;
+        // JSONBin API Functions
+        async function fetchFromJsonBin() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-        // Helper functions
-        function showElement(elementId) {
-            document.getElementById(elementId).classList.remove('d-none');
-        }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-        function hideElement(elementId) {
-            document.getElementById(elementId).classList.add('d-none');
-        }
-
-        function updateStepStatus(stepNum, status) {
-            const stepElement = document.getElementById(`step${stepNum}`);
-            const numberElement = document.getElementById(`step${stepNum}Number`);
-            
-            stepElement.className = `form-step fade-in ${status}`;
-            
-            if (status === 'completed') {
-                numberElement.innerHTML = '<i class="fas fa-check"></i>';
-                numberElement.className = 'step-number completed';
-            } else if (status === 'error') {
-                numberElement.innerHTML = '<i class="fas fa-times"></i>';
-                numberElement.className = 'step-number error';
+                const result = await response.json();
+                return result.record;
+            } catch (error) {
+                console.error('Error fetching from JSONBin:', error);
+                // Fallback to default structure
+                return {
+                    voters: {},
+                    votes: { A: 0, B: 0 },
+                    metadata: {
+                        created: new Date().toISOString(),
+                        totalVotes: 0
+                    }
+                };
             }
         }
 
-        function showStatus(containerId, type, title, message, icon = null) {
-            const container = document.getElementById(containerId);
-            const iconHtml = icon ? `<i class="${icon} me-3"></i>` : '';
-            
-            container.innerHTML = `
-                <div class="status-indicator status-${type}">
-                    ${iconHtml}
-                    <div>
-                        <strong>${title}</strong><br>
-                        <small>${message}</small>
-                    </div>
-                </div>
+        async function updateJsonBin(data) {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error updating JSONBin:', error);
+                throw error;
+            }
+        }
+
+        async function createNewJsonBin() {
+            const initialData = {
+                voters: {},
+                votes: { A: 0, B: 0 },
+                metadata: {
+                    created: new Date().toISOString(),
+                    totalVotes: 0,
+                    description: "Digital Voting System Data"
+                }
+            };
+
+            try {
+                const response = await fetch('https://api.jsonbin.io/v3/b', {
+                    method: 'POST',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY,
+                        'Content-Type': 'application/json',
+                        'X-Bin-Name': 'voting-system-' + Date.now()
+                    },
+                    body: JSON.stringify(initialData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result.metadata.id;
+            } catch (error) {
+                console.error('Error creating new JSONBin:', error);
+                throw error;
+            }
+        }
+
+        // Utility Functions
+        function showStatus(elementId, type, message, icon = '') {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator status-${type}`;
+            element.innerHTML = `
+                <i class="fas ${icon} me-3"></i>
+                <div>${message}</div>
             `;
-            container.classList.remove('d-none');
+            element.classList.remove('d-none');
         }
 
         function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371e3; // Earth's radius in meters
-            const φ1 = lat1 * Math.PI/180;
-            const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180;
-            const Δλ = (lng2-lng1) * Math.PI/180;
-
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const R = 6371000; // Earth's radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
             return R * c;
         }
 
-        // Step 1: Validate voter information
+        function setStepCompleted(stepNumber, completed = true) {
+            const stepElement = document.getElementById(`step${stepNumber}`);
+            const numberElement = document.getElementById(`step${stepNumber}Number`);
+            
+            if (completed) {
+                stepElement.classList.add('completed');
+                numberElement.classList.add('completed');
+                numberElement.innerHTML = '<i class="fas fa-check"></i>';
+            } else {
+                stepElement.classList.add('error');
+                numberElement.classList.add('error');
+                numberElement.innerHTML = '<i class="fas fa-times"></i>';
+            }
+        }
+
+        // Step 1: Voter Information Validation
         async function validateStep1() {
             const nameInput = document.getElementById('voterName');
             const mobileInput = document.getElementById('mobileNumber');
-            const btnText = document.getElementById('step1BtnText');
+            const button = document.getElementById('step1Btn');
             const spinner = document.getElementById('step1Spinner');
-            
+            const buttonText = document.getElementById('step1BtnText');
+
             const name = nameInput.value.trim();
             const mobile = mobileInput.value.trim();
 
-            // Reset previous states
-            hideElement('step1Status');
-            
-            // Validation
+            // Validate inputs
             if (!name || name.length < 2) {
-                showStatus('step1Status', 'error', 'Invalid Name', 'Please enter your full name (minimum 2 characters)', 'fas fa-exclamation-triangle');
+                showStatus('step1Status', 'error', 'Please enter a valid full name (at least 2 characters)', 'fa-exclamation-circle');
                 return;
             }
 
-            if (!/^\d{10}$/.test(mobile)) {
-                showStatus('step1Status', 'error', 'Invalid Mobile Number', 'Please enter a valid 10-digit mobile number', 'fas fa-exclamation-triangle');
+            if (!mobile || !/^\d{10}$/.test(mobile)) {
+                showStatus('step1Status', 'error', 'Please enter a valid 10-digit mobile number', 'fa-exclamation-circle');
                 return;
             }
 
-            // Show loading
-            btnText.textContent = 'Validating...';
+            // Show loading state
+            button.disabled = true;
             spinner.classList.remove('d-none');
+            buttonText.textContent = 'Checking voter eligibility...';
 
             try {
-                // Check if mobile number already voted
-                const hasVoted = await checkIfVoted(mobile);
+                // Check if this mobile number has already voted
+                const data = await fetchFromJsonBin();
                 
-                if (hasVoted) {
-                    showStatus('step1Status', 'error', 'Already Voted', `Mobile number ${mobile} has already been used to vote. Each number can only vote once.`, 'fas fa-ban');
-                    updateStepStatus(1, 'error');
+                if (data.voters[mobile] && data.voters[mobile].hasVoted) {
+                    // Voter has already voted
+                    button.disabled = false;
+                    spinner.classList.add('d-none');
+                    buttonText.textContent = 'Continue to Verification';
+                    
+                    showStatus('step1Status', 'error', 
+                        `This mobile number (+91 ${mobile}) has already been used to vote. Each mobile number can only vote once. If you believe this is an error, please contact the election administrator.`, 
+                        'fa-ban'
+                    );
+                    setStepCompleted(1, false);
                     return;
                 }
 
-                // Store voter info
+                // Store voter information
                 currentVoter.name = name;
                 currentVoter.mobile = mobile;
 
-                // Mark step as completed
-                updateStepStatus(1, 'completed');
-                showStatus('step1Status', 'success', 'Information Validated', 'Voter details verified successfully', 'fas fa-check-circle');
+                // Success - proceed to step 2
+                button.disabled = false;
+                spinner.classList.add('d-none');
+                buttonText.textContent = 'Continue to Verification';
                 
-                // Show step 2
+                showStatus('step1Status', 'success', 'Voter information validated successfully!', 'fa-check-circle');
+                setStepCompleted(1, true);
+                
+                // Show step 2 after a short delay
                 setTimeout(() => {
-                    showElement('step2');
+                    document.getElementById('step1').classList.add('d-none');
+                    document.getElementById('step2').classList.remove('d-none');
                     document.getElementById('displayMobile').textContent = mobile;
-                    updateStepStatus(2, 'completed');
                 }, 1000);
 
             } catch (error) {
-                showStatus('step1Status', 'error', 'Validation Failed', 'Error validating voter information. Please try again.', 'fas fa-exclamation-triangle');
-                updateStepStatus(1, 'error');
-            } finally {
-                btnText.textContent = 'Continue to Verification';
+                button.disabled = false;
                 spinner.classList.add('d-none');
+                buttonText.textContent = 'Continue to Verification';
+                
+                showStatus('step1Status', 'error', 
+                    'Unable to verify voter eligibility. Please check your internet connection and try again.', 
+                    'fa-exclamation-triangle'
+                );
+                console.error('Error checking voter eligibility:', error);
             }
         }
 
-        // Step 2: Proceed to location verification
+        // Step 2: Proceed to Location
         function proceedToLocation() {
-            showElement('step3');
+            setStepCompleted(2, true);
+            document.getElementById('step2').classList.add('d-none');
+            document.getElementById('step3').classList.remove('d-none');
             checkLocation();
         }
 
-        // Step 3: Location verification
+        // Step 3: Location Verification
         function checkLocation() {
-            const locationStatus = document.getElementById('locationStatus');
-            const locationResult = document.getElementById('locationResult');
-            const locationDisplay = document.getElementById('locationDisplay');
-
             if (!navigator.geolocation) {
-                locationResult.innerHTML = `
-                    <div class="status-indicator status-error">
-                        <i class="fas fa-times-circle me-3"></i>
-                        <div>
-                            <strong>Geolocation Error:</strong><br>
-                            <small>Your browser does not support location services</small>
-                        </div>
-                    </div>
-                `;
-                showElement('locationResult');
-                hideElement('locationStatus');
-                updateStepStatus(3, 'error');
+                showLocationError('Geolocation is not supported by this browser.');
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    currentVoter.location = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        accuracy: position.coords.accuracy
-                    };
+                    const { latitude, longitude } = position.coords;
+                    currentVoter.location = { lat: latitude, lng: longitude };
 
                     const distance = calculateDistance(
-                        currentVoter.location.lat,
-                        currentVoter.location.lng,
-                        GEOFENCE_CENTER.lat,
-                        GEOFENCE_CENTER.lng
+                        latitude, longitude,
+                        GEOFENCE_CENTER.lat, GEOFENCE_CENTER.lng
                     );
 
-                    const isInGeofence = distance <= GEOFENCE_RADIUS;
+                    const locationDisplay = document.getElementById('locationDisplay');
+                    locationDisplay.innerHTML = `
+                        <strong><i class="fas fa-map-marker-alt me-2"></i>Your Location:</strong><br>
+                        Latitude: ${latitude.toFixed(6)}<br>
+                        Longitude: ${longitude.toFixed(6)}<br>
+                        Distance from voting center: ${Math.round(distance)}m
+                    `;
+                    locationDisplay.classList.remove('d-none');
 
-                    hideElement('locationStatus');
-                    
-                    if (isInGeofence) {
-                        locationResult.innerHTML = `
-                            <div class="status-indicator status-success">
-                                <i class="fas fa-check-circle me-3"></i>
-                                <div>
-                                    <strong>Location Verified:</strong> You are within the voting area<br>
-                                    <small>Distance from center: ${Math.round(distance)}m (within ${GEOFENCE_RADIUS}m limit)</small>
-                                </div>
-                            </div>
-                        `;
-                        
-                        locationDisplay.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong><i class="fas fa-map-marker-alt me-2"></i>Current Location:</strong><br>
-                                    <small>Lat: ${currentVoter.location.lat.toFixed(6)}, Lng: ${currentVoter.location.lng.toFixed(6)}</small><br>
-                                    <small>Accuracy: ±${Math.round(currentVoter.location.accuracy)}m</small>
-                                </div>
-                                <div class="text-success">
-                                    <i class="fas fa-check-circle fa-2x"></i>
-                                </div>
-                            </div>
-                        `;
-                        
-                        updateStepStatus(3, 'completed');
-                        showElement('proceedToVoting');
-                        
+                    if (distance <= GEOFENCE_RADIUS) {
+                        showLocationSuccess();
                     } else {
-                        locationResult.innerHTML = `
-                            <div class="status-indicator status-error">
-                                <i class="fas fa-times-circle me-3"></i>
-                                <div>
-                                    <strong>Outside Voting Zone:</strong> You are not in the designated voting area<br>
-                                    <small>Distance from center: ${Math.round(distance)}m (exceeds ${GEOFENCE_RADIUS}m limit)</small>
-                                </div>
-                            </div>
-                        `;
-                        
-                        locationDisplay.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong><i class="fas fa-map-marker-alt me-2"></i>Current Location:</strong><br>
-                                    <small>You must be within ${GEOFENCE_RADIUS}m of the voting center to cast your vote</small><br>
-                                    <small>Please move closer to the designated voting area</small>
-                                </div>
-                                <div class="text-danger">
-                                    <i class="fas fa-times-circle fa-2x"></i>
-                                </div>
-                            </div>
-                        `;
-                        
-                        updateStepStatus(3, 'error');
+                        showLocationError(`You are ${Math.round(distance)}m away from the voting area. You must be within ${GEOFENCE_RADIUS}m to vote.`);
                     }
-                    
-                    showElement('locationResult');
-                    showElement('locationDisplay');
                 },
                 (error) => {
-                    hideElement('locationStatus');
-                    
-                    let errorMessage = 'Unable to get your location. ';
-                    let errorDetail = '';
-                    
-                    switch(error.code) {
+                    let errorMessage = 'Unable to access your location. ';
+                    switch (error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMessage = 'Location Access Denied';
-                            errorDetail = 'Please allow location access and refresh the page to continue';
+                            errorMessage += 'Please allow location access and try again.';
                             break;
                         case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'Location Unavailable';
-                            errorDetail = 'Location information is not available on this device';
+                            errorMessage += 'Location information is unavailable.';
                             break;
                         case error.TIMEOUT:
-                            errorMessage = 'Location Timeout';
-                            errorDetail = 'Location request timed out. Please try again';
+                            errorMessage += 'Location request timed out.';
                             break;
                         default:
-                            errorMessage = 'Location Error';
-                            errorDetail = 'An unknown error occurred while getting your location';
+                            errorMessage += 'An unknown error occurred.';
                     }
-                    
-                    locationResult.innerHTML = `
-                        <div class="status-indicator status-error">
-                            <i class="fas fa-exclamation-triangle me-3"></i>
-                            <div>
-                                <strong>${errorMessage}:</strong><br>
-                                <small>${errorDetail}</small>
-                            </div>
-                        </div>
-                    `;
-                    
-                    showElement('locationResult');
-                    updateStepStatus(3, 'error');
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 300000
+                    showLocationError(errorMessage);
                 }
             );
         }
 
-        // Show voting section
-        function showVotingSection() {
-            document.getElementById('confirmedName').textContent = currentVoter.name;
-            document.getElementById('confirmedMobile').textContent = currentVoter.mobile;
-            showElement('votingSection');
-            
-            // Scroll to voting section
-            document.getElementById('votingSection').scrollIntoView({ behavior: 'smooth' });
+        function showLocationSuccess() {
+            const locationResult = document.getElementById('locationResult');
+            locationResult.innerHTML = `
+                <div class="status-indicator status-success">
+                    <i class="fas fa-check-circle me-3"></i>
+                    <div>
+                        <strong>Location Verified!</strong><br>
+                        You are within the designated voting area.
+                    </div>
+                </div>
+            `;
+            locationResult.classList.remove('d-none');
+            document.getElementById('locationStatus').classList.add('d-none');
+            document.getElementById('proceedToVoting').classList.remove('d-none');
+            setStepCompleted(3, true);
         }
 
-        // Select candidate
+        function showLocationError(message) {
+            const locationResult = document.getElementById('locationResult');
+            locationResult.innerHTML = `
+                <div class="status-indicator status-error">
+                    <i class="fas fa-exclamation-circle me-3"></i>
+                    <div>
+                        <strong>Location Verification Failed</strong><br>
+                        ${message}
+                    </div>
+                </div>
+            `;
+            locationResult.classList.remove('d-none');
+            document.getElementById('locationStatus').classList.add('d-none');
+            setStepCompleted(3, false);
+        }
+
+        // Voting Section
+        function showVotingSection() {
+            document.getElementById('step3').classList.add('d-none');
+            document.getElementById('votingSection').classList.remove('d-none');
+            
+            // Display confirmed voter information
+            document.getElementById('confirmedName').textContent = currentVoter.name;
+            document.getElementById('confirmedMobile').textContent = currentVoter.mobile;
+        }
+
         function selectCandidate(candidate) {
             selectedCandidate = candidate;
-            document.getElementById('selectedCandidateName').textContent = `Candidate ${candidate}`;
-            showElement('voteConfirmation');
+            const candidateName = `Candidate ${candidate}`;
+            document.getElementById('selectedCandidateName').textContent = candidateName;
+            document.getElementById('voteConfirmation').classList.remove('d-none');
             
             // Scroll to confirmation
             document.getElementById('voteConfirmation').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Cancel vote
         function cancelVote() {
             selectedCandidate = '';
-            hideElement('voteConfirmation');
+            document.getElementById('voteConfirmation').classList.add('d-none');
         }
 
-
-        // Confirm vote
         async function confirmVote() {
-            if (!selectedCandidate) return;
+            if (!selectedCandidate) {
+                alert('Please select a candidate first.');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmVoteBtn');
+            const spinner = document.getElementById('confirmVoteSpinner');
+            const buttonText = document.getElementById('confirmVoteBtnText');
+
+            // Show loading state
+            confirmBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            buttonText.textContent = 'Recording Vote...';
 
             try {
+                // Fetch current data to double-check voter hasn't voted
+                const currentData = await fetchFromJsonBin();
+                
+                // Final check - ensure voter hasn't voted in the meantime
+                if (currentData.voters[currentVoter.mobile] && currentData.voters[currentVoter.mobile].hasVoted) {
+                    confirmBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                    buttonText.textContent = 'Confirm Vote';
+                    
+                    alert('This mobile number has already been used to vote. Your vote cannot be recorded.');
+                    return;
+                }
+
                 // Record the vote
-                await recordVote(currentVoter.mobile, selectedCandidate, currentVoter.name);
+                const timestamp = new Date().toISOString();
                 
-                // Update success section
-                document.getElementById('successName').textContent = currentVoter.name;
-                document.getElementById('successVote').textContent = `Candidate ${selectedCandidate}`;
-                document.getElementById('voteTimestamp').textContent = new Date().toLocaleString();
+                // Add voter to voters object
+                currentData.voters[currentVoter.mobile] = {
+                    name: currentVoter.name,
+                    mobile: currentVoter.mobile,
+                    location: currentVoter.location,
+                    candidate: selectedCandidate,
+                    timestamp: timestamp,
+                    hasVoted: true
+                };
+
+                // Increment vote count
+                currentData.votes[selectedCandidate]++;
                 
-                // Hide voting section and show success
-                hideElement('votingSection');
-                showElement('successSection');
-                
-                // Scroll to success section
-                document.getElementById('successSection').scrollIntoView({ behavior: 'smooth' });
-                
+                // Update metadata
+                currentData.metadata.totalVotes++;
+                currentData.metadata.lastUpdated = timestamp;
+
+                // Save to JSONBin
+                await updateJsonBin(currentData);
+
+                // Mark as voted locally
                 currentVoter.hasVoted = true;
-                
+
+                // Show success
+                confirmBtn.disabled = false;
+                spinner.classList.add('d-none');
+                buttonText.textContent = 'Confirm Vote';
+
+                showSuccessSection(timestamp);
+
             } catch (error) {
-                alert('Error recording vote. Please try again.');
-                console.error('Vote recording error:', error);
+                confirmBtn.disabled = false;
+                spinner.classList.add('d-none');
+                buttonText.textContent = 'Confirm Vote';
+                
+                console.error('Error recording vote:', error);
+                alert('Failed to record your vote. Please try again or contact support.');
             }
         }
 
-        // Show results
-        async function showResults() {
-            await updateResults();
-            hideElement('successSection');
-            showElement('resultsSection');
+        function showSuccessSection(timestamp) {
+            document.getElementById('votingSection').classList.add('d-none');
+            document.getElementById('successSection').classList.remove('d-none');
             
-            // Scroll to results
-            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-            
-            // Auto-refresh results every 5 seconds
-            setInterval(updateResults, 5000);
+            // Populate success information
+            document.getElementById('successName').textContent = currentVoter.name;
+            document.getElementById('successVote').textContent = `Candidate ${selectedCandidate}`;
+            document.getElementById('voteTimestamp').textContent = new Date(timestamp).toLocaleString();
         }
 
-       
+        async function showResults() {
+            document.getElementById('successSection').classList.add('d-none');
+            document.getElementById('resultsSection').classList.remove('d-none');
+            await updateResults();
+        }
 
-      
-       
-
-        // Update results display
         async function updateResults() {
-            const voteCounts = await getVoteCounts();
-            const totalVotes = Object.values(voteCounts).reduce((sum, count) => sum + count, 0);
-            
-            document.getElementById('totalVotes').textContent = totalVotes;
-            
-            const resultsContainer = document.getElementById('resultsContainer');
-            
-            const candidateData = {
-                'A': { name: 'Candidate A', color: 'candidate-a', tagline: 'Building Tomorrow Together' },
-                'B': { name: 'Candidate B', color: 'candidate-b', tagline: 'Progress Through Unity' }
-            };
-            
-            resultsContainer.innerHTML = Object.entries(voteCounts).map(([candidate, votes]) => {
-                const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : 0;
-                const data = candidateData[candidate];
+            try {
+                const data = await fetchFromJsonBin();
+                const totalVotes = data.metadata.totalVotes || 0;
+                const votesA = data.votes.A || 0;
+                const votesB = data.votes.B || 0;
                 
-                return `
-                    <div class="result-item ${data.color}">
+                document.getElementById('totalVotes').textContent = totalVotes;
+                
+                const resultsContainer = document.getElementById('resultsContainer');
+                resultsContainer.innerHTML = '';
+                
+                // Candidate A Results
+                const percentageA = totalVotes > 0 ? (votesA / totalVotes * 100).toFixed(1) : 0;
+                resultsContainer.innerHTML += `
+                    <div class="result-item candidate-a">
                         <div class="result-header">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="candidate-avatar me-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div class="flex-fill">
-                                    <h4 class="mb-1">${data.name}</h4>
-                                    <p class="text-muted small mb-0">${data.tagline}</p>
-                                </div>
-                                <div class="text-end">
-                                    <h3 class="mb-0">${percentage}%</h3>
-                                    <small class="text-muted">${votes} votes</small>
-                                </div>
-                            </div>
+                            <h4 class="mb-0">Candidate A</h4>
+                            <span class="h4 mb-0">${votesA} votes (${percentageA}%)</span>
                         </div>
                         <div class="progress-modern">
-                            <div class="progress-bar-modern ${data.color}" style="width: ${percentage}%"></div>
+                            <div class="progress-bar-modern candidate-a" style="width: ${percentageA}%"></div>
                         </div>
                     </div>
                 `;
-            }).join('');
+                
+                // Candidate B Results
+                const percentageB = totalVotes > 0 ? (votesB / totalVotes * 100).toFixed(1) : 0;
+                resultsContainer.innerHTML += `
+                    <div class="result-item candidate-b">
+                        <div class="result-header">
+                            <h4 class="mb-0">Candidate B</h4>
+                            <span class="h4 mb-0">${votesB} votes (${percentageB}%)</span>
+                        </div>
+                        <div class="progress-modern">
+                            <div class="progress-bar-modern candidate-b" style="width: ${percentageB}%"></div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error updating results:', error);
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="status-indicator status-error">
+                        <i class="fas fa-exclamation-triangle me-3"></i>
+                        <div>
+                            <strong>Error Loading Results</strong><br>
+                            Unable to fetch latest results. Please try again.
+                        </div>
+                    </div>
+                `;
+            }
         }
 
-        // Input formatting
-        document.getElementById('mobileNumber').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Focus on name input
-            document.getElementById('voterName').focus();
+        // Initialize the application
+        window.addEventListener('load', function() {
+            console.log('Digital Voting System loaded successfully');
         });
     </script>
-    <div id="recaptcha-container"></div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } 
-    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyA0s9hT9qaaq_ijGYtXpAcJU2vo101v8RI",
-    authDomain: "blockchain-voting-system-a4ca3.firebaseapp.com",
-    databaseURL: "https://blockchain-voting-system-a4ca3-default-rtdb.firebaseio.com",
-    projectId: "blockchain-voting-system-a4ca3",
-    storageBucket: "blockchain-voting-system-a4ca3.appspot.com",
-    messagingSenderId: "324833638126",
-    appId: "1:324833638126:web:55ce47d0727dfdf4c7a5ff"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
-    'size': 'invisible'
-  }, auth);
-
-  window.sendOTP = function(phoneNumber) {
-    signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
-      .then(confirmationResult => {
-        window.confirmationResult = confirmationResult;
-        alert("OTP sent. Enter 123456 (test code) to verify.");
-      })
-      .catch(error => {
-        console.error(error);
-        alert("Error sending OTP");
-      });
-  }
-
-  window.confirmOTP = function(code) {
-    window.confirmationResult.confirm(code)
-      .then(() => {
-        alert("Phone verified!");
-        // now allow user to go to the next voting step
-      })
-      .catch(() => alert("Invalid OTP"));
-  }
-</script>
 </body>
-    
-
 </html>
 
 
