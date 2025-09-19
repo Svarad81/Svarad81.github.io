@@ -774,6 +774,31 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+
+  window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+    'size': 'invisible'
+  }, auth);
+
+  window.sendOTP = function(phoneNumber) {
+    signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
+      .then(confirmationResult => {
+        window.confirmationResult = confirmationResult;
+        alert("OTP sent. Enter 123456 (test code) to verify.");
+      })
+      .catch(error => {
+        console.error(error);
+        alert("Error sending OTP");
+      });
+  }
+
+  window.confirmOTP = function(code) {
+    window.confirmationResult.confirm(code)
+      .then(() => {
+        alert("Phone verified!");
+        // now allow user to go to the next voting step
+      })
+      .catch(() => alert("Invalid OTP"));
+  }
   window.checkIfVoted = async function(mobile) {
     const snapshot = await get(ref(db, 'voters/' + mobile));
     return snapshot.exists();
@@ -1204,4 +1229,5 @@
     
 </body>
     
+
 </html>
