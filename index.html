@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Voting System - Multi-Booth</title>
+    <title>Digital Voting System - Secure & Verified</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -82,16 +82,6 @@
             color: #64748b;
             font-weight: 400;
             margin-bottom: 2rem;
-        }
-
-        .booth-info {
-            background: #e0f2fe;
-            border: 1px solid #03a9f4;
-            color: #0277bd;
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            text-align: center;
         }
 
         .security-badges {
@@ -466,7 +456,7 @@
 
         .result-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: between;
             align-items: center;
             margin-bottom: 1rem;
         }
@@ -503,36 +493,14 @@
             border: 1px solid #e2e8f0;
         }
 
-        .booth-results-section {
-            margin-top: 2rem;
-        }
-
-        .booth-result-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid #e2e8f0;
-        }
-
-        .booth-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .booth-name {
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .booth-votes {
-            color: #6b7280;
-            font-size: 0.875rem;
+        .setup-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
         }
 
         @media (max-width: 768px) {
@@ -556,12 +524,6 @@
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
             }
-
-            .result-header {
-                flex-direction: column;
-                align-items: start;
-                gap: 0.5rem;
-            }
         }
 
         .fade-in {
@@ -583,9 +545,9 @@
                     <i class="fas fa-shield-alt me-3"></i>
                     Digital Voting System
                 </h1>
-                <p class="subtitle">Multi-Booth Secure & Verified Democracy</p>
+                <p class="subtitle">Secure, Verified, and Transparent Democracy</p>
                 
-               
+                <!-- Setup Notice -->
                
                 
                 <div class="security-badges">
@@ -599,7 +561,7 @@
                         <i class="fas fa-mobile-alt me-2"></i>One Vote Only
                     </span>
                     <span class="security-badge">
-                        <i class="fas fa-chart-bar me-2"></i>Multi-Booth Results
+                        <i class="fas fa-check-circle me-2"></i>Real-time Results
                     </span>
                 </div>
             </div>
@@ -700,7 +662,7 @@
                         <i class="fas fa-check-circle me-3"></i>
                         <div>
                             <strong>Voter:</strong> <span id="confirmedName"></span><br>
-                            <small>Mobile: +91 <span id="confirmedMobile"></span> | Booth: <span id="confirmedBooth"></span> | Location: Verified ✓</small>
+                            <small>Mobile: +91 <span id="confirmedMobile"></span> | Location: Verified ✓</small>
                         </div>
                     </div>
                 </div>
@@ -740,7 +702,7 @@
                             <i class="fas fa-exclamation-triangle me-3"></i>
                             <div>
                                 <strong>Confirm Your Vote</strong><br>
-                                You are about to vote for <strong id="selectedCandidateName"></strong> at <strong id="selectedBoothName"></strong>. This action cannot be undone.
+                                You are about to vote for <strong id="selectedCandidateName"></strong>. This action cannot be undone.
                             </div>
                         </div>
                         
@@ -773,7 +735,6 @@
                         <div>
                             <strong>Voter:</strong> <span id="successName"></span><br>
                             <strong>Vote:</strong> <span id="successVote"></span><br>
-                            <strong>Booth:</strong> <span id="successBooth"></span><br>
                             <strong>Time:</strong> <span id="voteTimestamp"></span><br>
                             <small>Your vote is anonymous and secure</small>
                         </div>
@@ -796,26 +757,14 @@
                     <div class="status-indicator status-info">
                         <i class="fas fa-sync-alt me-3"></i>
                         <div>
-                            <strong>Total Votes Cast:</strong> <span id="totalVotes">0</span> across <span id="totalBooths">0</span> booths<br>
+                            <strong>Total Votes Cast:</strong> <span id="totalVotes">0</span><br>
                             <small>Results update in real-time from JSONBin</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Overall Results -->
-                <div id="overallResults" class="results-section">
-                    <h4 class="mb-3"><i class="fas fa-trophy me-2"></i>Overall Results</h4>
-                    <div id="overallResultsContainer">
-                        <!-- Overall results will be populated here -->
-                    </div>
-                </div>
-
-                <!-- Booth-wise Results -->
-                <div id="boothResults" class="booth-results-section">
-                    <h4 class="mb-3"><i class="fas fa-building me-2"></i>Booth-wise Results</h4>
-                    <div id="boothResultsContainer">
-                        <!-- Booth results will be populated here -->
-                    </div>
+                <div id="resultsContainer" class="results-section">
+                    <!-- Results will be populated here -->
                 </div>
 
                 <div class="text-center mt-4">
@@ -829,49 +778,23 @@
     </div>
 
     <script>
-        // Configuration - You can modify these booth configurations
-        const BOOTH_CONFIG = {
-            'BOOTH_001': {
-                name: 'RAVET, PUNE',
-                location: 'North District Community Hall',
-                geofence: { lat: 18.64683713259295, lng: 73.7568511188494, radius: 500 }
-            },
-            'BOOTH_002': {
-                name: 'School Building - South',
-                location: 'South District Elementary School',
-                geofence: { lat: 18.6400, lng: 73.7500, radius: 500 }
-            },
-            'BOOTH_003': {
-                name: 'Municipal Office - East',
-                location: 'East Side Municipal Building',
-                geofence: { lat: 18.6500, lng: 73.7600, radius: 500 }
-            },
-            'BOOTH_004': {
-                name: 'Library - West',
-                location: 'West District Public Library',
-                geofence: { lat: 18.6450, lng: 73.7450, radius: 500 }
-            }
-        };
-        
-        // Set the current booth - YOU CAN MODIFY THIS
-        const CURRENT_BOOTH_ID = 'BOOTH_001'; // Change this to set which booth this terminal represents
+        // Configuration
+        const GEOFENCE_CENTER = { lat: 18.664170, lng: 73.813331}; // Ravet, pune - Change as needed
+        const GEOFENCE_RADIUS = 500; // meters
         
         // JSONBin Configuration - Replace with your actual credentials
-        const JSONBIN_API_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq';
-        const JSONBIN_BIN_ID = '68cd4571ae596e708ff3def9';
+        const JSONBIN_API_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; // Replace with your actual master key
+        const JSONBIN_BIN_ID = '68cd4571ae596e708ff3def9'; // Replace with your actual bin ID or leave empty to create new
         
         // Global variables
         let currentVoter = {
             name: '',
             mobile: '',
             location: null,
-            boothId: CURRENT_BOOTH_ID,
             hasVoted: false
         };
 
         let selectedCandidate = '';
-
-   
 
         // JSONBin API Functions
         async function fetchFromJsonBin() {
@@ -892,30 +815,15 @@
                 return result.record;
             } catch (error) {
                 console.error('Error fetching from JSONBin:', error);
-                // Fallback to default structure for multi-booth system
-                const defaultData = {
+                // Fallback to default structure
+                return {
                     voters: {},
-                    booths: {},
-                    overallVotes: { A: 0, B: 0 },
+                    votes: { A: 0, B: 0 },
                     metadata: {
                         created: new Date().toISOString(),
-                        totalVotes: 0,
-                        totalBooths: 0
+                        totalVotes: 0
                     }
                 };
-                
-                // Initialize booth data
-                Object.keys(BOOTH_CONFIG).forEach(boothId => {
-                    defaultData.booths[boothId] = {
-                        name: BOOTH_CONFIG[boothId].name,
-                        location: BOOTH_CONFIG[boothId].location,
-                        votes: { A: 0, B: 0 },
-                        totalVotes: 0,
-                        voters: []
-                    };
-                });
-                
-                return defaultData;
             }
         }
 
@@ -937,6 +845,40 @@
                 return await response.json();
             } catch (error) {
                 console.error('Error updating JSONBin:', error);
+                throw error;
+            }
+        }
+
+        async function createNewJsonBin() {
+            const initialData = {
+                voters: {},
+                votes: { A: 0, B: 0 },
+                metadata: {
+                    created: new Date().toISOString(),
+                    totalVotes: 0,
+                    description: "Digital Voting System Data"
+                }
+            };
+
+            try {
+                const response = await fetch('https://api.jsonbin.io/v3/b', {
+                    method: 'POST',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY,
+                        'Content-Type': 'application/json',
+                        'X-Bin-Name': 'voting-system-' + Date.now()
+                    },
+                    body: JSON.stringify(initialData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result.metadata.id;
+            } catch (error) {
+                console.error('Error creating new JSONBin:', error);
                 throw error;
             }
         }
@@ -1006,7 +948,7 @@
             buttonText.textContent = 'Checking voter eligibility...';
 
             try {
-                // Check if this mobile number has already voted across all booths
+                // Check if this mobile number has already voted
                 const data = await fetchFromJsonBin();
                 
                 if (data.voters[mobile] && data.voters[mobile].hasVoted) {
@@ -1015,11 +957,8 @@
                     spinner.classList.add('d-none');
                     buttonText.textContent = 'Continue to Verification';
                     
-                    const voterBooth = data.voters[mobile].boothId;
-                    const boothName = BOOTH_CONFIG[voterBooth] ? BOOTH_CONFIG[voterBooth].name : voterBooth;
-                    
                     showStatus('step1Status', 'error', 
-                        `This mobile number (+91 ${mobile}) has already been used to vote at ${boothName}. Each mobile number can only vote once across all booths. If you believe this is an error, please contact the election administrator.`, 
+                        `This mobile number (+91 ${mobile}) has already been used to vote. Each mobile number can only vote once. If you believe this is an error, please contact the election administrator.`, 
                         'fa-ban'
                     );
                     setStepCompleted(1, false);
@@ -1073,12 +1012,6 @@
                 return;
             }
 
-            const currentBooth = BOOTH_CONFIG[CURRENT_BOOTH_ID];
-            if (!currentBooth) {
-                showLocationError('Booth configuration error. Please contact support.');
-                return;
-            }
-
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
@@ -1086,7 +1019,7 @@
 
                     const distance = calculateDistance(
                         latitude, longitude,
-                        currentBooth.geofence.lat, currentBooth.geofence.lng
+                        GEOFENCE_CENTER.lat, GEOFENCE_CENTER.lng
                     );
 
                     const locationDisplay = document.getElementById('locationDisplay');
@@ -1094,14 +1027,14 @@
                         <strong><i class="fas fa-map-marker-alt me-2"></i>Your Location:</strong><br>
                         Latitude: ${latitude.toFixed(6)}<br>
                         Longitude: ${longitude.toFixed(6)}<br>
-                        Distance from ${currentBooth.name}: ${Math.round(distance)}m
+                        Distance from voting center: ${Math.round(distance)}m
                     `;
                     locationDisplay.classList.remove('d-none');
 
-                    if (distance <= currentBooth.geofence.radius) {
+                    if (distance <= GEOFENCE_RADIUS) {
                         showLocationSuccess();
                     } else {
-                        showLocationError(`You are ${Math.round(distance)}m away from ${currentBooth.name}. You must be within ${currentBooth.geofence.radius}m to vote at this booth.`);
+                        showLocationError(`You are ${Math.round(distance)}m away from the voting area. You must be within ${GEOFENCE_RADIUS}m to vote.`);
                     }
                 },
                 (error) => {
@@ -1124,29 +1057,22 @@
             );
         }
 
-       function showLocationSuccess() {
-    const currentBooth = BOOTH_CONFIG[CURRENT_BOOTH_ID];
-
-    // Set booth info here (instead of on page load)
-    document.getElementById('currentBoothName').textContent = currentBooth.name;
-    document.getElementById('currentBoothLocation').textContent = currentBooth.location;
-
-    const locationResult = document.getElementById('locationResult');
-    locationResult.innerHTML = `
-        <div class="status-indicator status-success">
-            <i class="fas fa-check-circle me-3"></i>
-            <div>
-                <strong>Location Verified!</strong><br>
-                You are within the designated area for ${currentBooth.name}.
-            </div>
-        </div>
-    `;
-    locationResult.classList.remove('d-none');
-    document.getElementById('locationStatus').classList.add('d-none');
-    document.getElementById('proceedToVoting').classList.remove('d-none');
-    setStepCompleted(3, true);
-}
-
+        function showLocationSuccess() {
+            const locationResult = document.getElementById('locationResult');
+            locationResult.innerHTML = `
+                <div class="status-indicator status-success">
+                    <i class="fas fa-check-circle me-3"></i>
+                    <div>
+                        <strong>Location Verified!</strong><br>
+                        You are within the designated voting area.
+                    </div>
+                </div>
+            `;
+            locationResult.classList.remove('d-none');
+            document.getElementById('locationStatus').classList.add('d-none');
+            document.getElementById('proceedToVoting').classList.remove('d-none');
+            setStepCompleted(3, true);
+        }
 
         function showLocationError(message) {
             const locationResult = document.getElementById('locationResult');
@@ -1172,14 +1098,12 @@
             // Display confirmed voter information
             document.getElementById('confirmedName').textContent = currentVoter.name;
             document.getElementById('confirmedMobile').textContent = currentVoter.mobile;
-            document.getElementById('confirmedBooth').textContent = BOOTH_CONFIG[CURRENT_BOOTH_ID].name;
         }
 
         function selectCandidate(candidate) {
             selectedCandidate = candidate;
             const candidateName = `Candidate ${candidate}`;
             document.getElementById('selectedCandidateName').textContent = candidateName;
-            document.getElementById('selectedBoothName').textContent = BOOTH_CONFIG[CURRENT_BOOTH_ID].name;
             document.getElementById('voteConfirmation').classList.remove('d-none');
             
             // Scroll to confirmation
@@ -1220,55 +1144,25 @@
                     return;
                 }
 
-                // Initialize booth data if it doesn't exist
-                if (!currentData.booths[CURRENT_BOOTH_ID]) {
-                    currentData.booths[CURRENT_BOOTH_ID] = {
-                        name: BOOTH_CONFIG[CURRENT_BOOTH_ID].name,
-                        location: BOOTH_CONFIG[CURRENT_BOOTH_ID].location,
-                        votes: { A: 0, B: 0 },
-                        totalVotes: 0,
-                        voters: []
-                    };
-                }
-
                 // Record the vote
                 const timestamp = new Date().toISOString();
                 
-                // Add voter to global voters object
+                // Add voter to voters object
                 currentData.voters[currentVoter.mobile] = {
                     name: currentVoter.name,
                     mobile: currentVoter.mobile,
                     location: currentVoter.location,
-                    boothId: CURRENT_BOOTH_ID,
                     candidate: selectedCandidate,
                     timestamp: timestamp,
                     hasVoted: true
                 };
 
-                // Add voter to booth-specific voters list
-                currentData.booths[CURRENT_BOOTH_ID].voters.push({
-                    mobile: currentVoter.mobile,
-                    candidate: selectedCandidate,
-                    timestamp: timestamp
-                });
-
-                // Increment booth vote count
-                currentData.booths[CURRENT_BOOTH_ID].votes[selectedCandidate]++;
-                currentData.booths[CURRENT_BOOTH_ID].totalVotes++;
-
-                // Increment overall vote count
-                if (!currentData.overallVotes) {
-                    currentData.overallVotes = { A: 0, B: 0 };
-                }
-                currentData.overallVotes[selectedCandidate]++;
-
+                // Increment vote count
+                currentData.votes[selectedCandidate]++;
+                
                 // Update metadata
-                if (!currentData.metadata) {
-                    currentData.metadata = { totalVotes: 0, totalBooths: 0 };
-                }
                 currentData.metadata.totalVotes++;
                 currentData.metadata.lastUpdated = timestamp;
-                currentData.metadata.totalBooths = Object.keys(currentData.booths).length;
 
                 // Save to JSONBin
                 await updateJsonBin(currentData);
@@ -1300,7 +1194,6 @@
             // Populate success information
             document.getElementById('successName').textContent = currentVoter.name;
             document.getElementById('successVote').textContent = `Candidate ${selectedCandidate}`;
-            document.getElementById('successBooth').textContent = BOOTH_CONFIG[CURRENT_BOOTH_ID].name;
             document.getElementById('voteTimestamp').textContent = new Date(timestamp).toLocaleString();
         }
 
@@ -1313,32 +1206,22 @@
         async function updateResults() {
             try {
                 const data = await fetchFromJsonBin();
-                
-                // Calculate overall totals
-                let totalVotes = 0;
-                let overallVotes = { A: 0, B: 0 };
-                
-                if (data.overallVotes) {
-                    overallVotes = data.overallVotes;
-                    totalVotes = overallVotes.A + overallVotes.B;
-                }
-                
-                const totalBooths = Object.keys(data.booths || {}).length;
+                const totalVotes = data.metadata.totalVotes || 0;
+                const votesA = data.votes.A || 0;
+                const votesB = data.votes.B || 0;
                 
                 document.getElementById('totalVotes').textContent = totalVotes;
-                document.getElementById('totalBooths').textContent = totalBooths;
                 
-                // Display overall results
-                const overallResultsContainer = document.getElementById('overallResultsContainer');
-                overallResultsContainer.innerHTML = '';
+                const resultsContainer = document.getElementById('resultsContainer');
+                resultsContainer.innerHTML = '';
                 
-                // Candidate A Overall Results
-                const percentageA = totalVotes > 0 ? (overallVotes.A / totalVotes * 100).toFixed(1) : 0;
-                overallResultsContainer.innerHTML += `
+                // Candidate A Results
+                const percentageA = totalVotes > 0 ? (votesA / totalVotes * 100).toFixed(1) : 0;
+                resultsContainer.innerHTML += `
                     <div class="result-item candidate-a">
                         <div class="result-header">
                             <h4 class="mb-0">Candidate A</h4>
-                            <span class="h4 mb-0">${overallVotes.A} votes (${percentageA}%)</span>
+                            <span class="h4 mb-0">${votesA} votes (${percentageA}%)</span>
                         </div>
                         <div class="progress-modern">
                             <div class="progress-bar-modern candidate-a" style="width: ${percentageA}%"></div>
@@ -1346,13 +1229,13 @@
                     </div>
                 `;
                 
-                // Candidate B Overall Results
-                const percentageB = totalVotes > 0 ? (overallVotes.B / totalVotes * 100).toFixed(1) : 0;
-                overallResultsContainer.innerHTML += `
+                // Candidate B Results
+                const percentageB = totalVotes > 0 ? (votesB / totalVotes * 100).toFixed(1) : 0;
+                resultsContainer.innerHTML += `
                     <div class="result-item candidate-b">
                         <div class="result-header">
                             <h4 class="mb-0">Candidate B</h4>
-                            <span class="h4 mb-0">${overallVotes.B} votes (${percentageB}%)</span>
+                            <span class="h4 mb-0">${votesB} votes (${percentageB}%)</span>
                         </div>
                         <div class="progress-modern">
                             <div class="progress-bar-modern candidate-b" style="width: ${percentageB}%"></div>
@@ -1360,62 +1243,9 @@
                     </div>
                 `;
 
-                // Display booth-wise results
-                const boothResultsContainer = document.getElementById('boothResultsContainer');
-                boothResultsContainer.innerHTML = '';
-                
-                if (data.booths) {
-                    Object.keys(data.booths).forEach(boothId => {
-                        const booth = data.booths[boothId];
-                        const boothTotal = booth.totalVotes || 0;
-                        const boothA = booth.votes?.A || 0;
-                        const boothB = booth.votes?.B || 0;
-                        const boothPercentageA = boothTotal > 0 ? (boothA / boothTotal * 100).toFixed(1) : 0;
-                        const boothPercentageB = boothTotal > 0 ? (boothB / boothTotal * 100).toFixed(1) : 0;
-                        
-                        boothResultsContainer.innerHTML += `
-                            <div class="booth-result-card">
-                                <div class="booth-header">
-                                    <div class="booth-name">${booth.name || boothId}</div>
-                                    <div class="booth-votes">${boothTotal} votes cast</div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="text-primary fw-bold">Candidate A</small>
-                                            <small class="text-primary">${boothA} (${boothPercentageA}%)</small>
-                                        </div>
-                                        <div class="progress-modern" style="height: 8px;">
-                                            <div class="progress-bar-modern candidate-a" style="width: ${boothPercentageA}%"></div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="text-success fw-bold">Candidate B</small>
-                                            <small class="text-success">${boothB} (${boothPercentageB}%)</small>
-                                        </div>
-                                        <div class="progress-modern" style="height: 8px;">
-                                            <div class="progress-bar-modern candidate-b" style="width: ${boothPercentageB}%"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-
-                if (boothResultsContainer.innerHTML === '') {
-                    boothResultsContainer.innerHTML = `
-                        <div class="status-indicator status-info">
-                            <i class="fas fa-info-circle me-3"></i>
-                            <div>No booth data available yet.</div>
-                        </div>
-                    `;
-                }
-
             } catch (error) {
                 console.error('Error updating results:', error);
-                document.getElementById('overallResultsContainer').innerHTML = `
+                document.getElementById('resultsContainer').innerHTML = `
                     <div class="status-indicator status-error">
                         <i class="fas fa-exclamation-triangle me-3"></i>
                         <div>
@@ -1429,10 +1259,11 @@
 
         // Initialize the application
         window.addEventListener('load', function() {
-            initializeBooth();
-            console.log('Multi-Booth Digital Voting System loaded successfully');
-            console.log('Current Booth:', CURRENT_BOOTH_ID, BOOTH_CONFIG[CURRENT_BOOTH_ID]);
+            console.log('Digital Voting System loaded successfully');
         });
+    </script>
+</body>
+</html>
 
 
 
