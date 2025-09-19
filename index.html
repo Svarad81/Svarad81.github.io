@@ -591,6 +591,32 @@
                     <div class="step-number" id="step2Number">2</div>
                     <h3 class="step-title">Mobile Verification</h3>
                 </div>
+                <div class="status-indicator status-info">
+  <i class="fas fa-info-circle me-3"></i>
+  <div>
+    <strong>Verification Status:</strong> Mobile number validated successfully<br>
+    <small>Number: +91 <span id="displayMobile"></span></small>
+  </div>
+</div>
+
+<!-- reCAPTCHA placeholder (must be present in DOM) -->
+<div id="recaptcha-container"></div>
+
+<!-- OTP input area (hidden until OTP sent) -->
+<div id="otpSection" class="d-none mt-3">
+  <div class="form-group">
+    <label class="form-label">Enter OTP</label>
+    <input type="tel" id="otpInput" class="form-control-modern" placeholder="Enter OTP">
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn-modern btn-primary-modern flex-fill" onclick="confirmOTP(document.getElementById('otpInput').value)">
+      Verify OTP
+    </button>
+    <button class="btn-modern btn-secondary-modern flex-fill" onclick="sendOTP('+91' + document.getElementById('displayMobile').textContent)">
+      Resend OTP
+    </button>
+  </div>
+</div>
 
                 <div class="status-indicator status-info">
                     <i class="fas fa-info-circle me-3"></i>
@@ -751,15 +777,12 @@
         </div>
     </div>
 
-
-
-    
- 
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
   import { getDatabase, ref, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+  import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
+  // ---------- your firebase config ----------
   const firebaseConfig = {
     apiKey: "AIzaSyA0s9hT9qaaq_ijGYtXpAcJU2vo101v8RI",
     authDomain: "blockchain-voting-system-a4ca3.firebaseapp.com",
@@ -771,34 +794,12 @@
     measurementId: "G-DJFJ673JRR"
   };
 
+  // ---------- initialize ----------
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const auth = getAuth(app);
 
-
-  window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
-    'size': 'invisible'
-  }, auth);
-
-  window.sendOTP = function(phoneNumber) {
-    signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
-      .then(confirmationResult => {
-        window.confirmationResult = confirmationResult;
-        alert("OTP sent. Enter 123456 (test code) to verify.");
-      })
-      .catch(error => {
-        console.error(error);
-        alert("Error sending OTP");
-      });
-  }
-
-  window.confirmOTP = function(code) {
-    window.confirmationResult.confirm(code)
-      .then(() => {
-        alert("Phone verified!");
-        // now allow user to go to the next voting step
-      })
-      .catch(() => alert("Invalid OTP"));
-  }
+  // ---------- DB helper functions (available globally) ----------
   window.checkIfVoted = async function(mobile) {
     const snapshot = await get(ref(db, 'voters/' + mobile));
     return snapshot.exists();
@@ -815,6 +816,57 @@
     return snapshot.val() || {};
   }
 
+  // ---------- reCAPTCHA + Phone Auth helpers ----------
+  window.initRecaptcha = function() {
+    // ensure DOM element exists before creating verifier
+    if (window.recaptchaVerifier) return;
+    const el = document.getElementById('recaptcha-container');
+    if (!el) {
+      console.warn('recaptcha-container not found in DOM');
+      return;
+    }
+    window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', { size: 'invisible' }, auth);
+    // render returns a Promise if you want to wait for it:
+    window.recaptchaVerifier.render().catch(()=>{/*ignore render errors*/});
+  }
+
+  window.sendOTP = async function(phoneNumber) {
+    try {
+      // ensure recaptcha is initialized
+      window.initRecaptcha();
+      if (!window.recaptchaVerifier) throw new Error('reCAPTCHA not initialized');
+
+      // send OTP
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+      window.confirmationResult = confirmationResult;
+
+      // show OTP UI
+      const otpSection = document.getElementById('otpSection');
+      if (otpSection) otpSection.classList.remove('d-none');
+
+      alert('OTP sent to ' + phoneNumber + '. (If using test number, use the test code configured in Firebase console.)');
+    } catch (err) {
+      console.error('sendOTP error', err);
+      alert('Error sending OTP: ' + (err.message || err));
+      // reset recaptcha if necessary
+      if (window.recaptchaVerifier && window.recaptchaVerifier.clear) try { window.recaptchaVerifier.clear(); } catch(e){}
+      window.recaptchaVerifier = null;
+    }
+  }
+
+  window.confirmOTP = async function(code) {
+    try {
+      if (!window.confirmationResult) throw new Error('No confirmation result. Request OTP first.');
+      const result = await window.confirmationResult.confirm(code);
+      // phone auth succeeded — you can optionally sign the user out of auth here or use `result.user` info
+      alert('Phone verified successfully!');
+      return result.user;
+    } catch (err) {
+      console.error('confirmOTP error', err);
+      alert('Invalid OTP or verification failed.');
+      throw err;
+    }
+  }
 
         // Configuration
         const GEOFENCE_CENTER = { lat: 18.64508, lng: 73.75752 }; // New Delhi - Change as needed
@@ -1275,4 +1327,5 @@
     
 
 </html>
+
 
