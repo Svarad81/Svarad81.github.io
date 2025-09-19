@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Voting System - Secure & Verified</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --primary-green: #16a34a;
+            --secondary-purple: #7c3aed;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-heavy: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --border-radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gradient-primary);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            background: var(--gradient-primary);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .voting-card {
+            background: var(--gradient-card);
+            border-radius: 24px;
+            box-shadow: var(--shadow-heavy);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 3rem 2rem;
+            margin: 0 auto;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .voting-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue), var(--primary-green), var(--secondary-purple));
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .main-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #64748b;
+            font-weight: 400;
+            margin-bottom: 2rem;
+        }
+
+        .security-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .security-badge {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-blue);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .form-step {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-medium);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .form-step.completed {
+            border-color: var(--primary-green);
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .form-step.error {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 1rem;
+            box-shadow: var(--shadow-light);
+        }
+
+        .step-number.completed {
+            background: var(--gradient-success);
+        }
+
+        .step-number.error {
+            background: var(--gradient-danger);
+        }
+
+        .step-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.975rem;
+        }
+
+        .form-control-modern {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-control-modern:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .input-group-modern {
+            position: relative;
+            display: flex;
+        }
+
+        .input-prefix {
+            background: #f8fafc;
+            border: 2px solid #e5e7eb;
+            border-right: none;
+            border-radius: 12px 0 0 12px;
+            padding: 1rem 1.25rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .input-group-modern .form-control-modern {
+            border-left: none;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .btn-modern {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-light);
+            text-transform: none;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .btn-modern:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary-modern {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-success-modern {
+            background: var(--gradient-success);
+            color: white;
+        }
+
+        .btn-danger-modern {
+            background: var(--gradient-danger);
+            color: white;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .status-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .status-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+        }
+
+        .status-warning {
+            background: #fffbeb;
+            border: 1px solid #fed7aa;
+            color: #d97706;
+        }
+
+        .status-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .spinner-modern {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .candidate-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .candidate-card-modern {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-medium);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .candidate-card-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .candidate-card-modern.candidate-a::before {
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+        }
+
+        .candidate-card-modern.candidate-b::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .candidate-card-modern:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .candidate-card-modern.candidate-a {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+
+        .candidate-card-modern.candidate-b {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .candidate-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: white;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .candidate-a .candidate-avatar {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .candidate-b .candidate-avatar {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .candidate-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .candidate-a .candidate-name {
+            color: #1d4ed8;
+        }
+
+        .candidate-b .candidate-name {
+            color: #059669;
+        }
+
+        .candidate-tagline {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .vote-button {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .candidate-a .vote-button {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        .candidate-b .vote-button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .success-animation {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--gradient-success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            animation: successPop 0.6s ease-out;
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .results-section {
+            margin-top: 3rem;
+        }
+
+        .result-item {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            border-left: 6px solid;
+        }
+
+        .result-item.candidate-a {
+            border-left-color: #3b82f6;
+        }
+
+        .result-item.candidate-b {
+            border-left-color: #10b981;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .progress-modern {
+            height: 12px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar-modern {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+        }
+
+        .progress-bar-modern.candidate-a {
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+        }
+
+        .progress-bar-modern.candidate-b {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .location-display {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+
+            .voting-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .main-title {
+                font-size: 2rem;
+            }
+
+            .security-badges {
+                gap: 0.5rem;
+            }
+
+            .candidate-section {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="voting-card">
+            <!-- Header Section -->
+            <div class="header-section">
+                <h1 class="main-title">
+                    <i class="fas fa-shield-alt me-3"></i>
+                    Digital Voting System
+                </h1>
+                <p class="subtitle">Secure, Verified, and Transparent Democracy</p>
+                
+                <div class="security-badges">
+                    <span class="security-badge">
+                        <i class="fas fa-lock me-2"></i>Encrypted
+                    </span>
+                    <span class="security-badge">
+                        <i class="fas fa-map-marker-alt me-2"></i>Geo-Verified
+                    </span>
+                    <span class="security-badge">
+                        <i class="fas fa-mobile-alt me-2"></i>OTP Secured
+                    </span>
+                    <span class="security-badge">
+                        <i class="fas fa-check-circle me-2"></i>Auditable
+                    </span>
+                </div>
+            </div>
+
+            <!-- Step 1: Voter Information -->
+            <div class="form-step fade-in" id="step1">
+                <div class="step-header">
+                    <div class="step-number" id="step1Number">1</div>
+                    <h3 class="step-title">Voter Information</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-user me-2"></i>Full Name
+                            </label>
+                            <input type="text" id="voterName" class="form-control-modern" placeholder="Enter your full name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-mobile-alt me-2"></i>Mobile Number
+                            </label>
+                            <div class="input-group-modern">
+                                <span class="input-prefix">+91</span>
+                                <input type="tel" id="mobileNumber" class="form-control-modern" placeholder="Enter 10-digit mobile number" maxlength="10" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-modern btn-primary-modern w-100" onclick="validateStep1()">
+                    <span id="step1BtnText">Continue to Verification</span>
+                    <i id="step1Spinner" class="fas fa-spinner fa-spin ms-2 d-none"></i>
+                </button>
+
+                <div id="step1Status" class="d-none"></div>
+            </div>
+
+            <!-- Step 2: Mobile Verification -->
+            <div class="form-step fade-in d-none" id="step2">
+                <div class="step-header">
+                    <div class="step-number" id="step2Number">2</div>
+                    <h3 class="step-title">Mobile Verification</h3>
+                </div>
+
+                <div class="status-indicator status-info">
+                    <i class="fas fa-info-circle me-3"></i>
+                    <div>
+                        <strong>Verification Status:</strong> Mobile number validated successfully<br>
+                        <small>Number: +91 <span id="displayMobile"></span></small>
+                    </div>
+                </div>
+
+                <button class="btn-modern btn-primary-modern w-100 mt-3" onclick="proceedToLocation()">
+                    Continue to Location Check
+                    <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+
+            <!-- Step 3: Location Verification -->
+            <div class="form-step fade-in d-none" id="step3">
+                <div class="step-header">
+                    <div class="step-number" id="step3Number">3</div>
+                    <h3 class="step-title">Location Verification</h3>
+                </div>
+
+                <div id="locationStatus">
+                    <div class="status-indicator status-info">
+                        <div class="spinner-modern"></div>
+                        <div>
+                            <strong>Checking Location:</strong> Please allow location access when prompted<br>
+                            <small>Verifying you are within the designated voting area</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="locationResult" class="d-none"></div>
+                <div id="locationDisplay" class="location-display d-none"></div>
+
+                <button id="proceedToVoting" class="btn-modern btn-success-modern w-100 mt-3 d-none" onclick="showVotingSection()">
+                    Proceed to Voting
+                    <i class="fas fa-vote-yea ms-2"></i>
+                </button>
+            </div>
+
+            <!-- Voting Section -->
+            <div id="votingSection" class="d-none fade-in">
+                <div class="text-center mb-4">
+                    <h2 class="h3 mb-3">
+                        <i class="fas fa-vote-yea me-2"></i>
+                        Cast Your Vote
+                    </h2>
+                    <p class="text-muted">Select your preferred candidate</p>
+                    <div class="status-indicator status-success">
+                        <i class="fas fa-check-circle me-3"></i>
+                        <div>
+                            <strong>Voter:</strong> <span id="confirmedName"></span><br>
+                            <small>Mobile: +91 <span id="confirmedMobile"></span> | Location: Verified ✓</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-section">
+                    <!-- Candidate A -->
+                    <div class="candidate-card-modern candidate-a" onclick="selectCandidate('A')">
+                        <div class="candidate-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="candidate-name">Candidate A</h4>
+                        <p class="candidate-tagline">"Building Tomorrow Together"</p>
+                        <button class="vote-button">
+                            <i class="fas fa-vote-yea me-2"></i>
+                            Vote for Candidate A
+                        </button>
+                    </div>
+
+                    <!-- Candidate B -->
+                    <div class="candidate-card-modern candidate-b" onclick="selectCandidate('B')">
+                        <div class="candidate-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="candidate-name">Candidate B</h4>
+                        <p class="candidate-tagline">"Progress Through Unity"</p>
+                        <button class="vote-button">
+                            <i class="fas fa-vote-yea me-2"></i>
+                            Vote for Candidate B
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vote Confirmation Modal -->
+                <div id="voteConfirmation" class="d-none mt-4">
+                    <div class="form-step">
+                        <div class="status-indicator status-warning">
+                            <i class="fas fa-exclamation-triangle me-3"></i>
+                            <div>
+                                <strong>Confirm Your Vote</strong><br>
+                                You are about to vote for <strong id="selectedCandidateName"></strong>. This action cannot be undone.
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-3 mt-3">
+                            <button class="btn-modern btn-success-modern flex-fill" onclick="confirmVote()">
+                                <i class="fas fa-check me-2"></i>
+                                Confirm Vote
+                            </button>
+                            <button class="btn-modern btn-danger-modern flex-fill" onclick="cancelVote()">
+                                <i class="fas fa-times me-2"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Section -->
+            <div id="successSection" class="d-none fade-in">
+                <div class="success-animation">
+                    <div class="success-icon">
+                        <i class="fas fa-check fa-3x text-white"></i>
+                    </div>
+                    <h2 class="h3 mb-3">Vote Successfully Recorded!</h2>
+                    <p class="text-muted mb-4">Thank you for participating in the democratic process.</p>
+                    
+                    <div class="status-indicator status-success mb-4">
+                        <i class="fas fa-shield-alt me-3"></i>
+                        <div>
+                            <strong>Voter:</strong> <span id="successName"></span><br>
+                            <strong>Vote:</strong> <span id="successVote"></span><br>
+                            <strong>Time:</strong> <span id="voteTimestamp"></span><br>
+                            <small>Your vote is anonymous and secure</small>
+                        </div>
+                    </div>
+
+                    <button class="btn-modern btn-primary-modern" onclick="showResults()">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Live Results
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="d-none fade-in">
+                <div class="text-center mb-4">
+                    <h2 class="h3 mb-3">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Live Election Results
+                    </h2>
+                    <div class="status-indicator status-info">
+                        <i class="fas fa-sync-alt me-3"></i>
+                        <div>
+                            <strong>Total Votes Cast:</strong> <span id="totalVotes">0</span><br>
+                            <small>Results update in real-time</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="resultsContainer" class="results-section">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    
+ 
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getDatabase, ref, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0s9hT9qaaq_ijGYtXpAcJU2vo101v8RI",
+    authDomain: "blockchain-voting-system-a4ca3.firebaseapp.com",
+    databaseURL: "https://blockchain-voting-system-a4ca3-default-rtdb.firebaseio.com",
+    projectId: "blockchain-voting-system-a4ca3",
+    storageBucket: "blockchain-voting-system-a4ca3.firebasestorage.app",
+    messagingSenderId: "324833638126",
+    appId: "1:324833638126:web:55ce47d0727dfdf4c7a5ff",
+    measurementId: "G-DJFJ673JRR"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.checkIfVoted = async function(mobile) {
+    const snapshot = await get(ref(db, 'voters/' + mobile));
+    return snapshot.exists();
+  }
+
+  window.recordVote = async function(mobile, candidate, name) {
+    await set(ref(db, 'voters/' + mobile), { voted: true, name: name });
+    const candidateRef = ref(db, 'votes/' + candidate);
+    await runTransaction(candidateRef, current => (current || 0) + 1);
+  }
+
+  window.getVoteCounts = async function() {
+    const snapshot = await get(ref(db, 'votes'));
+    return snapshot.val() || {};
+  }
+
+
+        // Configuration
+        const GEOFENCE_CENTER = { lat: 18.64508, lng: 73.75752 }; // New Delhi - Change as needed
+        const GEOFENCE_RADIUS = 500; // meters
+        
+        // Global variables
+        let currentVoter = {
+            name: '',
+            mobile: '',
+            location: null,
+            hasVoted: false
+        };
+
+        let selectedCandidate = '';
+
+        // Firebase configuration (for demo, using localStorage)
+        let useFirebase = true;
+
+        // Helper functions
+        function showElement(elementId) {
+            document.getElementById(elementId).classList.remove('d-none');
+        }
+
+        function hideElement(elementId) {
+            document.getElementById(elementId).classList.add('d-none');
+        }
+
+        function updateStepStatus(stepNum, status) {
+            const stepElement = document.getElementById(`step${stepNum}`);
+            const numberElement = document.getElementById(`step${stepNum}Number`);
+            
+            stepElement.className = `form-step fade-in ${status}`;
+            
+            if (status === 'completed') {
+                numberElement.innerHTML = '<i class="fas fa-check"></i>';
+                numberElement.className = 'step-number completed';
+            } else if (status === 'error') {
+                numberElement.innerHTML = '<i class="fas fa-times"></i>';
+                numberElement.className = 'step-number error';
+            }
+        }
+
+        function showStatus(containerId, type, title, message, icon = null) {
+            const container = document.getElementById(containerId);
+            const iconHtml = icon ? `<i class="${icon} me-3"></i>` : '';
+            
+            container.innerHTML = `
+                <div class="status-indicator status-${type}">
+                    ${iconHtml}
+                    <div>
+                        <strong>${title}</strong><br>
+                        <small>${message}</small>
+                    </div>
+                </div>
+            `;
+            container.classList.remove('d-none');
+        }
+
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371e3; // Earth's radius in meters
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lng2-lng1) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c;
+        }
+
+        // Step 1: Validate voter information
+        async function validateStep1() {
+            const nameInput = document.getElementById('voterName');
+            const mobileInput = document.getElementById('mobileNumber');
+            const btnText = document.getElementById('step1BtnText');
+            const spinner = document.getElementById('step1Spinner');
+            
+            const name = nameInput.value.trim();
+            const mobile = mobileInput.value.trim();
+
+            // Reset previous states
+            hideElement('step1Status');
+            
+            // Validation
+            if (!name || name.length < 2) {
+                showStatus('step1Status', 'error', 'Invalid Name', 'Please enter your full name (minimum 2 characters)', 'fas fa-exclamation-triangle');
+                return;
+            }
+
+            if (!/^\d{10}$/.test(mobile)) {
+                showStatus('step1Status', 'error', 'Invalid Mobile Number', 'Please enter a valid 10-digit mobile number', 'fas fa-exclamation-triangle');
+                return;
+            }
+
+            // Show loading
+            btnText.textContent = 'Validating...';
+            spinner.classList.remove('d-none');
+
+            try {
+                // Check if mobile number already voted
+                const hasVoted = await checkIfVoted(mobile);
+                
+                if (hasVoted) {
+                    showStatus('step1Status', 'error', 'Already Voted', `Mobile number ${mobile} has already been used to vote. Each number can only vote once.`, 'fas fa-ban');
+                    updateStepStatus(1, 'error');
+                    return;
+                }
+
+                // Store voter info
+                currentVoter.name = name;
+                currentVoter.mobile = mobile;
+
+                // Mark step as completed
+                updateStepStatus(1, 'completed');
+                showStatus('step1Status', 'success', 'Information Validated', 'Voter details verified successfully', 'fas fa-check-circle');
+                
+                // Show step 2
+                setTimeout(() => {
+                    showElement('step2');
+                    document.getElementById('displayMobile').textContent = mobile;
+                    updateStepStatus(2, 'completed');
+                }, 1000);
+
+            } catch (error) {
+                showStatus('step1Status', 'error', 'Validation Failed', 'Error validating voter information. Please try again.', 'fas fa-exclamation-triangle');
+                updateStepStatus(1, 'error');
+            } finally {
+                btnText.textContent = 'Continue to Verification';
+                spinner.classList.add('d-none');
+            }
+        }
+
+        // Step 2: Proceed to location verification
+        function proceedToLocation() {
+            showElement('step3');
+            checkLocation();
+        }
+
+        // Step 3: Location verification
+        function checkLocation() {
+            const locationStatus = document.getElementById('locationStatus');
+            const locationResult = document.getElementById('locationResult');
+            const locationDisplay = document.getElementById('locationDisplay');
+
+            if (!navigator.geolocation) {
+                locationResult.innerHTML = `
+                    <div class="status-indicator status-error">
+                        <i class="fas fa-times-circle me-3"></i>
+                        <div>
+                            <strong>Geolocation Error:</strong><br>
+                            <small>Your browser does not support location services</small>
+                        </div>
+                    </div>
+                `;
+                showElement('locationResult');
+                hideElement('locationStatus');
+                updateStepStatus(3, 'error');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentVoter.location = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+
+                    const distance = calculateDistance(
+                        currentVoter.location.lat,
+                        currentVoter.location.lng,
+                        GEOFENCE_CENTER.lat,
+                        GEOFENCE_CENTER.lng
+                    );
+
+                    const isInGeofence = distance <= GEOFENCE_RADIUS;
+
+                    hideElement('locationStatus');
+                    
+                    if (isInGeofence) {
+                        locationResult.innerHTML = `
+                            <div class="status-indicator status-success">
+                                <i class="fas fa-check-circle me-3"></i>
+                                <div>
+                                    <strong>Location Verified:</strong> You are within the voting area<br>
+                                    <small>Distance from center: ${Math.round(distance)}m (within ${GEOFENCE_RADIUS}m limit)</small>
+                                </div>
+                            </div>
+                        `;
+                        
+                        locationDisplay.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong><i class="fas fa-map-marker-alt me-2"></i>Current Location:</strong><br>
+                                    <small>Lat: ${currentVoter.location.lat.toFixed(6)}, Lng: ${currentVoter.location.lng.toFixed(6)}</small><br>
+                                    <small>Accuracy: ±${Math.round(currentVoter.location.accuracy)}m</small>
+                                </div>
+                                <div class="text-success">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        `;
+                        
+                        updateStepStatus(3, 'completed');
+                        showElement('proceedToVoting');
+                        
+                    } else {
+                        locationResult.innerHTML = `
+                            <div class="status-indicator status-error">
+                                <i class="fas fa-times-circle me-3"></i>
+                                <div>
+                                    <strong>Outside Voting Zone:</strong> You are not in the designated voting area<br>
+                                    <small>Distance from center: ${Math.round(distance)}m (exceeds ${GEOFENCE_RADIUS}m limit)</small>
+                                </div>
+                            </div>
+                        `;
+                        
+                        locationDisplay.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong><i class="fas fa-map-marker-alt me-2"></i>Current Location:</strong><br>
+                                    <small>You must be within ${GEOFENCE_RADIUS}m of the voting center to cast your vote</small><br>
+                                    <small>Please move closer to the designated voting area</small>
+                                </div>
+                                <div class="text-danger">
+                                    <i class="fas fa-times-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        `;
+                        
+                        updateStepStatus(3, 'error');
+                    }
+                    
+                    showElement('locationResult');
+                    showElement('locationDisplay');
+                },
+                (error) => {
+                    hideElement('locationStatus');
+                    
+                    let errorMessage = 'Unable to get your location. ';
+                    let errorDetail = '';
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location Access Denied';
+                            errorDetail = 'Please allow location access and refresh the page to continue';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location Unavailable';
+                            errorDetail = 'Location information is not available on this device';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location Timeout';
+                            errorDetail = 'Location request timed out. Please try again';
+                            break;
+                        default:
+                            errorMessage = 'Location Error';
+                            errorDetail = 'An unknown error occurred while getting your location';
+                    }
+                    
+                    locationResult.innerHTML = `
+                        <div class="status-indicator status-error">
+                            <i class="fas fa-exclamation-triangle me-3"></i>
+                            <div>
+                                <strong>${errorMessage}:</strong><br>
+                                <small>${errorDetail}</small>
+                            </div>
+                        </div>
+                    `;
+                    
+                    showElement('locationResult');
+                    updateStepStatus(3, 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 300000
+                }
+            );
+        }
+
+        // Show voting section
+        function showVotingSection() {
+            document.getElementById('confirmedName').textContent = currentVoter.name;
+            document.getElementById('confirmedMobile').textContent = currentVoter.mobile;
+            showElement('votingSection');
+            
+            // Scroll to voting section
+            document.getElementById('votingSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Select candidate
+        function selectCandidate(candidate) {
+            selectedCandidate = candidate;
+            document.getElementById('selectedCandidateName').textContent = `Candidate ${candidate}`;
+            showElement('voteConfirmation');
+            
+            // Scroll to confirmation
+            document.getElementById('voteConfirmation').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel vote
+        function cancelVote() {
+            selectedCandidate = '';
+            hideElement('voteConfirmation');
+        }
+
+
+        // Confirm vote
+        async function confirmVote() {
+            if (!selectedCandidate) return;
+
+            try {
+                // Record the vote
+                await recordVote(currentVoter.mobile, selectedCandidate, currentVoter.name);
+                
+                // Update success section
+                document.getElementById('successName').textContent = currentVoter.name;
+                document.getElementById('successVote').textContent = `Candidate ${selectedCandidate}`;
+                document.getElementById('voteTimestamp').textContent = new Date().toLocaleString();
+                
+                // Hide voting section and show success
+                hideElement('votingSection');
+                showElement('successSection');
+                
+                // Scroll to success section
+                document.getElementById('successSection').scrollIntoView({ behavior: 'smooth' });
+                
+                currentVoter.hasVoted = true;
+                
+            } catch (error) {
+                alert('Error recording vote. Please try again.');
+                console.error('Vote recording error:', error);
+            }
+        }
+
+        // Show results
+        async function showResults() {
+            await updateResults();
+            hideElement('successSection');
+            showElement('resultsSection');
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+            
+            // Auto-refresh results every 5 seconds
+            setInterval(updateResults, 5000);
+        }
+
+       
+
+      
+       
+
+        // Update results display
+        async function updateResults() {
+            const voteCounts = await getVoteCounts();
+            const totalVotes = Object.values(voteCounts).reduce((sum, count) => sum + count, 0);
+            
+            document.getElementById('totalVotes').textContent = totalVotes;
+            
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            const candidateData = {
+                'A': { name: 'Candidate A', color: 'candidate-a', tagline: 'Building Tomorrow Together' },
+                'B': { name: 'Candidate B', color: 'candidate-b', tagline: 'Progress Through Unity' }
+            };
+            
+            resultsContainer.innerHTML = Object.entries(voteCounts).map(([candidate, votes]) => {
+                const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : 0;
+                const data = candidateData[candidate];
+                
+                return `
+                    <div class="result-item ${data.color}">
+                        <div class="result-header">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="candidate-avatar me-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="flex-fill">
+                                    <h4 class="mb-1">${data.name}</h4>
+                                    <p class="text-muted small mb-0">${data.tagline}</p>
+                                </div>
+                                <div class="text-end">
+                                    <h3 class="mb-0">${percentage}%</h3>
+                                    <small class="text-muted">${votes} votes</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="progress-modern">
+                            <div class="progress-bar-modern ${data.color}" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Input formatting
+        document.getElementById('mobileNumber').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus on name input
+            document.getElementById('voterName').focus();
+        });
+    </script>
+    
+</body>
+    
+</html>
