@@ -1226,8 +1226,53 @@
             document.getElementById('voterName').focus();
         });
     </script>
-    
+    <div id="recaptcha-container"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } 
+    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0s9hT9qaaq_ijGYtXpAcJU2vo101v8RI",
+    authDomain: "blockchain-voting-system-a4ca3.firebaseapp.com",
+    databaseURL: "https://blockchain-voting-system-a4ca3-default-rtdb.firebaseio.com",
+    projectId: "blockchain-voting-system-a4ca3",
+    storageBucket: "blockchain-voting-system-a4ca3.appspot.com",
+    messagingSenderId: "324833638126",
+    appId: "1:324833638126:web:55ce47d0727dfdf4c7a5ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+    'size': 'invisible'
+  }, auth);
+
+  window.sendOTP = function(phoneNumber) {
+    signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
+      .then(confirmationResult => {
+        window.confirmationResult = confirmationResult;
+        alert("OTP sent. Enter 123456 (test code) to verify.");
+      })
+      .catch(error => {
+        console.error(error);
+        alert("Error sending OTP");
+      });
+  }
+
+  window.confirmOTP = function(code) {
+    window.confirmationResult.confirm(code)
+      .then(() => {
+        alert("Phone verified!");
+        // now allow user to go to the next voting step
+      })
+      .catch(() => alert("Invalid OTP"));
+  }
+</script>
 </body>
     
 
 </html>
+
