@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drowsiness Detection System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .alert-pulse {
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Drowsiness Detection System</h1>
+            <p class="text-gray-500 mt-2">A prototype for a smart vehicle safety system.</p>
+        </header>
+
+        <!-- Main UI container -->
+        <div id="main-ui">
+            <div class="space-y-6">
+                <!-- Connection Section -->
+                <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3">1. Connect to a Session</h2>
+                    <input type="text" id="room-id" placeholder="Enter Room ID (e.g., driver123)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <button id="camera-role-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition duration-200">
+                            📱 Driver Role
+                        </button>
+                        <button id="car-role-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition duration-200">
+                            🚗 Car Role
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Controls Section -->
+                <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3">2. Control</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="start-btn" disabled class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded-lg transition duration-200">
+                            Start
+                        </button>
+                        <button id="stop-btn" disabled class="bg-gray-400 hover:bg-gray-500 text-white font-medium py-2 rounded-lg transition duration-200">
+                            Stop
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status & Logs Section -->
+                <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3">3. Status</h2>
+                    <pre id="log-panel" class="bg-gray-800 text-white p-4 rounded-lg text-sm overflow-auto h-32"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Driver UI Container -->
+        <div id="driver-ui" class="hidden mt-8">
+            <div class="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg bg-black flex items-center justify-center">
+                <video id="video" autoplay playsinline class="w-full h-full object-cover transform scale-x-[-1]"></video>
+                <canvas id="canvas" class="video-overlay"></canvas>
+                <div id="loading-spinner" class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white text-center transition-opacity duration-300 opacity-0">
+                    <svg class="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.965l3-2.674z"></path>
+                    </svg>
+                    <p class="mt-4 text-lg">Loading AI model...</p>
+                </div>
+                <div id="driver-status" class="absolute bottom-4 left-4 right-4 p-4 bg-gray-800/80 rounded-lg text-white">
+                    <p id="ear-display" class="text-xl font-semibold">EAR: --</p>
+                    <p id="drowsy-timer-display" class="text-md mt-1">Drowsy for: 0.0s</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Car UI Container -->
+        <div id="car-ui" class="hidden mt-8 text-center space-y-4">
+            <div id="alert-status" class="hidden p-6 bg-red-100 text-red-700 rounded-lg border-2 border-red-400 font-bold text-2xl alert-pulse">
+                Drowsiness Alert!
+            </div>
+            <button id="acknowledge-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow-md transition duration-200">
+                Acknowledge
+            </button>
+        </div>
+    </div>
+
+    <!-- CDN Imports -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+    
+    <script>
+        // === JSONBin.io Configuration ===
+        // TODO: Replace with your actual JSONBin config
+        const JSONBIN_API_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; 
+        const JSONBIN_BIN_ID = '68cefa56d0ea881f408475ab';
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+        // === Global Variables ===
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const logPanel = document.getElementById('log-panel');
+        const mainUi = document.getElementById('main-ui');
+        const driverUi = document.getElementById('driver-ui');
+        const carUi = document.getElementById('car-ui');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        let role = null;
+        let isRunning = false;
+        let model = null;
+        let alertTimeout = null;
+        let carListenerInterval = null;
+        let lastAlertCount = 0;
+        let canTriggerAlert = true;
+        let drowsyStartTime = null;
+
+        const DROWSINESS_THRESHOLD = 0.2;
+        const DROWSINESS_DURATION_MS = 2000;
+        const ALERT_COOLDOWN_MS = 5000;
+        const ALERT_DURATION_MS = 15000;
+        const POLLING_INTERVAL_MS = 3000;
+        const EAR_HISTORY_LENGTH = 10;
+        const earHistory = [];
+
+        // === Utility Functions ===
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logPanel.textContent = `[${timestamp}] ${message}\n` + logPanel.textContent;
+        }
+
+        function showUI(ui) {
+            mainUi.classList.add('hidden');
+            driverUi.classList.add('hidden');
+            carUi.classList.add('hidden');
+            ui.classList.remove('hidden');
+        }
+
+        function showLoading(state) {
+            if (state) {
+                loadingSpinner.classList.remove('opacity-0', 'hidden');
+                loadingSpinner.classList.add('opacity-100');
+            } else {
+                loadingSpinner.classList.remove('opacity-100');
+                loadingSpinner.classList.add('opacity-0', 'hidden');
+            }
+        }
+        
+        function euclidean_distance(p1, p2) {
+            return Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
+        }
+
+        function get_ear(landmarks, eyeIndices) {
+            const p1 = landmarks[eyeIndices[0]];
+            const p2 = landmarks[eyeIndices[1]];
+            const p3 = landmarks[eyeIndices[2]];
+            const p4 = landmarks[eyeIndices[3]];
+            const p5 = landmarks[eyeIndices[4]];
+            const p6 = landmarks[eyeIndices[5]];
+
+            const vertical_dist1 = euclidean_distance(p2, p6);
+            const vertical_dist2 = euclidean_distance(p3, p5);
+            const horizontal_dist = euclidean_distance(p1, p4);
+
+            return (vertical_dist1 + vertical_dist2) / (2.0 * horizontal_dist);
+        }
+
+        // === UI Handlers ===
+        document.getElementById('camera-role-btn').addEventListener('click', () => {
+            role = 'camera';
+            showUI(driverUi);
+            document.getElementById('start-btn').disabled = false;
+            log('Selected role: Driver (Camera)');
+        });
+
+        document.getElementById('car-role-btn').addEventListener('click', () => {
+            role = 'car';
+            showUI(carUi);
+            document.getElementById('start-btn').disabled = false;
+            log('Selected role: Car');
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const roomId = document.getElementById('room-id').value;
+            if (!roomId) {
+                alert('Please enter a Room ID.');
+                return;
+            }
+
+            if (role === 'camera') {
+                startCamera();
+            } else if (role === 'car') {
+                startCarListener(roomId);
+            }
+
+            isRunning = true;
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = false;
+            document.getElementById('room-id').disabled = true;
+            document.getElementById('camera-role-btn').disabled = true;
+            document.getElementById('car-role-btn').disabled = true;
+        });
+
+        document.getElementById('stop-btn').addEventListener('click', () => {
+            stopSystem();
+            showUI(mainUi);
+        });
+
+        document.getElementById('acknowledge-btn').addEventListener('click', () => {
+            stopAlerts();
+            log('Alert acknowledged by user.');
+        });
+        
+        // === Driver Logic (Camera Role) ===
+        async function startCamera() {
+            log('Starting camera...');
+            showLoading(true);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                await loadModel();
+                video.addEventListener('loadeddata', () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    showLoading(false);
+                    startDetectionLoop();
+                });
+            } catch (err) {
+                log('Error accessing camera: ' + err.message);
+                showLoading(false);
+            }
+        }
+        
+        async function loadModel() {
+            if (model) return model;
+            log('Loading FaceMesh model...');
+            try {
+                model = await facemesh.load({ maxFaces: 1 });
+                log('FaceMesh model loaded successfully.');
+            } catch (err) {
+                log('Failed to load model: ' + err.message);
+                showLoading(false);
+                stopSystem();
+            }
+            return model;
+        }
+
+        async function startDetectionLoop() {
+            if (!isRunning || role !== 'camera') return;
+
+            const loadedModel = await loadModel();
+            if (!loadedModel) return;
+
+            const LEFT_EYE_INDICES = [33, 160, 158, 133, 153, 144];
+            const RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380];
+
+            async function detectFrame() {
+                if (!isRunning || !video.readyState >= 2) return;
+
+                const predictions = await loadedModel.estimateFaces({ input: video });
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (predictions.length > 0) {
+                    const face = predictions[0];
+                    const landmarks = face.scaledMesh;
+
+                    const leftEyeEAR = get_ear(landmarks, LEFT_EYE_INDICES);
+                    const rightEyeEAR = get_ear(landmarks, RIGHT_EYE_INDICES);
+                    const avgEAR = (leftEyeEAR + rightEyeEAR) / 2.0;
+
+                    earHistory.push(avgEAR);
+                    if (earHistory.length > EAR_HISTORY_LENGTH) {
+                        earHistory.shift();
+                    }
+                    const rollingAvgEAR = earHistory.reduce((sum, current) => sum + current, 0) / earHistory.length;
+
+                    // Timer-based drowsiness check
+                    if (rollingAvgEAR < DROWSINESS_THRESHOLD) {
+                        if (drowsyStartTime === null) {
+                            drowsyStartTime = performance.now();
+                            log('Eyes closed. Timer started.');
+                        }
+                        if (canTriggerAlert && (performance.now() - drowsyStartTime) >= DROWSINESS_DURATION_MS) {
+                            triggerAlert();
+                        }
+                    } else {
+                        drowsyStartTime = null;
+                    }
+                    
+                    // Display info on canvas
+                    document.getElementById('ear-display').textContent = `EAR: ${rollingAvgEAR.toFixed(2)}`;
+                    if (drowsyStartTime !== null) {
+                        const elapsed = Math.floor((performance.now() - drowsyStartTime) / 100) / 10;
+                        document.getElementById('drowsy-timer-display').textContent = `Drowsy for: ${elapsed}s`;
+                    } else {
+                        document.getElementById('drowsy-timer-display').textContent = `Drowsy for: 0.0s`;
+                    }
+                    
+                } else {
+                    drowsyStartTime = null;
+                    document.getElementById('ear-display').textContent = `EAR: --`;
+                    document.getElementById('drowsy-timer-display').textContent = `Drowsy for: 0.0s`;
+                }
+                
+                requestAnimationFrame(detectFrame);
+            }
+
+            detectFrame();
+        }
+
+        async function triggerAlert() {
+            const roomId = document.getElementById('room-id').value;
+            const newAlert = {
+                type: 'drowsiness',
+                timestamp: new Date().toISOString(),
+                message: 'Drowsiness detected!'
+            };
+            
+            try {
+                canTriggerAlert = false;
+                const response = await fetch(JSONBIN_URL, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                const binData = await response.json();
+                
+                const sessions = binData.record.sessions || {};
+                sessions[roomId] = sessions[roomId] || { alerts: [], sos: [] };
+                sessions[roomId].alerts.push(newAlert);
+                
+                await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify({ sessions })
+                });
+
+                log('Alert pushed to JSONBin.');
+                
+                setTimeout(() => {
+                    canTriggerAlert = true;
+                    log('Alert trigger is ready again.');
+                }, ALERT_COOLDOWN_MS); 
+
+            } catch (error) {
+                log('Error pushing alert: ' + error.message);
+                canTriggerAlert = true;
+            }
+        }
+        
+        // === Car Logic (Car Role) ===
+        function startCarListener(roomId) {
+            log('Starting polling for alerts...');
+            lastAlertCount = 0;
+            if (carListenerInterval) clearInterval(carListenerInterval);
+
+            carListenerInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(JSONBIN_URL, {
+                        headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                    });
+                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                    const binData = await response.json();
+                    
+                    const alerts = binData.record.sessions[roomId]?.alerts || [];
+
+                    if (alerts.length > lastAlertCount) {
+                        handleDrowsinessAlert();
+                        lastAlertCount = alerts.length;
+                    }
+                } catch (error) {
+                    log('Error polling JSONBin: ' + error.message);
+                }
+            }, POLLING_INTERVAL_MS);
+        }
+
+        function handleDrowsinessAlert() {
+            log('Drowsiness alert received!');
+            playBeep();
+            vibratePhone();
+            const alertStatus = document.getElementById('alert-status');
+            alertStatus.classList.remove('hidden');
+            document.getElementById('acknowledge-btn').classList.remove('hidden');
+            alertStatus.classList.add('alert-pulse');
+
+            if (alertTimeout) clearTimeout(alertTimeout);
+            alertTimeout = setTimeout(() => {
+                escalateToSOS();
+            }, ALERT_DURATION_MS);
+        }
+
+        function playBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                log('Web Audio API not supported.');
+            }
+        }
+        
+        function vibratePhone() {
+            if ("vibrate" in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            } else {
+                log('Vibrate API not supported.');
+            }
+        }
+
+        function stopAlerts() {
+            if (alertTimeout) clearTimeout(alertTimeout);
+            const alertStatus = document.getElementById('alert-status');
+            alertStatus.classList.add('hidden');
+            document.getElementById('acknowledge-btn').classList.add('hidden');
+            alertStatus.classList.remove('alert-pulse');
+        }
+
+        async function escalateToSOS() {
+            log('User did not acknowledge. Escalating to SOS...');
+            const roomId = document.getElementById('room-id').value;
+            
+            const sosRecord = {
+                timestamp: new Date().toISOString(),
+                message: 'SOS Activated due to unacknowledged drowsiness alert.',
+                location: 'Not available'
+            };
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        sosRecord.location = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        sendSOS(roomId, sosRecord);
+                    },
+                    (error) => {
+                        log('Geolocation error: ' + error.message);
+                        sendSOS(roomId, sosRecord);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                sendSOS(roomId, sosRecord);
+            }
+        }
+        
+        async function sendSOS(roomId, sosRecord) {
+            try {
+                const response = await fetch(JSONBIN_URL, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                const binData = await response.json();
+                
+                const sessions = binData.record.sessions || {};
+                sessions[roomId] = sessions[roomId] || { alerts: [], sos: [] };
+                sessions[roomId].sos.push(sosRecord);
+
+                await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify({ sessions })
+                });
+
+                showSOSPopup();
+                log('SOS record sent to JSONBin.');
+            } catch (error) {
+                log('Error sending SOS: ' + error.message);
+            }
+        }
+
+        function showSOSPopup() {
+            alert('🚨 SOS ACTIVATED 🚨\n\nPlease call emergency contact manually.');
+            stopAlerts();
+        }
+
+        // === System Control ===
+        function stopSystem() {
+            isRunning = false;
+            if (role === 'camera' && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            if (role === 'car' && carListenerInterval) {
+                clearInterval(carListenerInterval);
+                log('Stopped polling for alerts.');
+                stopAlerts();
+            }
+
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            document.getElementById('room-id').disabled = false;
+            document.getElementById('camera-role-btn').disabled = false;
+            document.getElementById('car-role-btn').disabled = false;
+            log('System stopped.');
+        }
+
+        // Check for API key at startup
+        (function() {
+            if (JSONBIN_API_KEY.includes('YOUR_')) {
+                log('⚠️ WARNING: JSONBin config not set. System will not work without it.');
+                document.getElementById('start-btn').disabled = true;
+            } else {
+                log('JSONBin is configured. Ready to connect.');
+            }
+        })();
+    </script>
+</body>
+</html>
