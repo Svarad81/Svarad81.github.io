@@ -951,19 +951,19 @@
                 // Check if this mobile number has already voted
                 const data = await fetchFromJsonBin();
                 
-                if (data.voters[mobile] && data.voters[mobile].hasVoted) {
-                    // Voter has already voted
-                    button.disabled = false;
-                    spinner.classList.add('d-none');
-                    buttonText.textContent = 'Continue to Verification';
-                    
-                    showStatus('step1Status', 'error', 
-                        `This mobile number (+91 ${mobile}) has already been used to vote. Each mobile number can only vote once. If you believe this is an error, please contact the election administrator.`, 
-                        'fa-ban'
-                    );
-                    setStepCompleted(1, false);
-                    return;
-                }
+               if (data.voters && data.voters[mobile]) {
+    // voter already voted
+    button.disabled = false;
+    spinner.classList.add('d-none');
+    buttonText.textContent = 'Continue to Verification';
+
+    showStatus('step1Status', 'error',
+        `This mobile number (+91 ${mobile}) has already been used to vote. Each mobile number can only vote once. If you believe this is an error, please contact the election administrator.`,
+        'fa-ban'
+    );
+    setStepCompleted(1, false);
+    return;
+}
 
                 // Store voter information
                 currentVoter.name = name;
@@ -1149,9 +1149,6 @@
                 
                 // Add voter to voters object
                 currentData.voters[currentVoter.mobile] = {
-                    name: currentVoter.name,
-                    mobile: currentVoter.mobile,
-                    location: currentVoter.location,
                     candidate: selectedCandidate,
                     timestamp: timestamp,
                     hasVoted: true
@@ -1264,6 +1261,7 @@
     </script>
 </body>
 </html>
+
 
 
 
