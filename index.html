@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drowsiness Detection System</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
+    .box { background:#fff; padding:15px; border-radius:8px; margin-bottom:15px; }
+    video { width:100%; border-radius:6px; transform:scaleX(-1); }
+    canvas { position:absolute; top:0; left:0; }
+    #alert { display:none; padding:10px; background:#ffcccc; border:2px solid red; border-radius:6px; text-align:center; font-weight:bold; margin-top:10px; }
+    pre { background:#111; color:#0f0; padding:10px; border-radius:6px; height:150px; overflow:auto; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Connection Setup</h2>
+    <input type="text" id="room-id" placeholder="Room ID (e.g., test1)">
+    <button id="driver-btn">📱 Driver</button>
+    <button id="car-btn">🚗 Car</button>
+    <button id="start-btn" disabled>Start</button>
+    <button id="stop-btn" disabled>Stop</button>
+  </div>
+
+  <div id="driver-ui" class="box" style="display:none">
+    <h2>Driver Camera</h2>
+    <div style="position:relative">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    <p id="ear-display">EAR: -- | Frames: 0</p>
+  </div>
+
+  <div id="car-ui" class="box" style="display:none">
+    <h2>Car Status</h2>
+    <div id="alert">🚨 Drowsiness Alert 🚨</div>
+    <button id="ack-btn" style="display:none">Acknowledge</button>
+  </div>
+
+  <div class="box">
+    <h2>Logs</h2>
+    <pre id="logs"></pre>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+
+  <script>
+  // === JSONBin Config ===
+  const JSONBIN_API_KEY = "$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq";
+  const JSONBIN_BIN_ID  = "68cefa56d0ea881f408475ab";
+  const JSONBIN_URL     = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+  // === Globals ===
+  let role=null, isRunning=false, model=null;
+  const video=document.getElementById("video");
+  const canvas=document.getElementById("canvas");
+  const ctx=canvas.getContext("2d");
+  const logs=document.getElementById("logs");
+  let frameCounter=0, drowsyCounter=0, lastAlertCount=0, carInterval=null, alertTimer=null;
+
+  // Parameters
+  const EAR_THRESHOLD=0.26;
+  const CONSECUTIVE_FRAMES=12;
+  const POLL_INTERVAL=3000;
+  const ALERT_TIMEOUT=15000;
+
+  // UI events
+  document.getElementById("driver-btn").onclick=()=>{ role="driver"; showUI("driver"); };
+  document.getElementById("car-btn").onclick=()=>{ role="car"; showUI("car"); };
+  document.getElementById("start-btn").onclick=()=>start();
+  document.getElementById("stop-btn").onclick=()=>stop();
+  document.getElementById("ack-btn").onclick=()=>stopAlert();
+
+  function showUI(which){
+    document.getElementById("driver-ui").style.display=(which==="driver")?"block":"none";
+    document.getElementById("car-ui").style.display=(which==="car")?"block":"none";
+    document.getElementById("start-btn").disabled=false;
+  }
+
+  function log(msg){
+    const t=new Date().toLocaleTimeString();
+    logs.textContent=`[${t}] ${msg}\n`+logs.textContent;
+  }
+
+  // EAR helpers
+  function dist(a,b){ return Math.hypot(a[0]-b[0], a[1]-b[1]); }
+  function EAR(lm, idx){
+    const p1=lm[idx[0]], p2=lm[idx[1]], p3=lm[idx[2]], p4=lm[idx[3]], p5=lm[idx[4]], p6=lm[idx[5]];
+    return (dist(p2,p6)+dist(p3,p5))/(2.0*dist(p1,p4));
+  }
+
+  async function start(){
+    const room=document.getElementById("room-id").value;
+    if(!room){ alert("Enter Room ID"); return; }
+    isRunning=true;
+    document.getElementById("start-btn").disabled=true;
+    document.getElementById("stop-btn").disabled=false;
+    if(role==="driver") startDriver(room);
+    if(role==="car") startCar(room);
+  }
+
+  function stop(){
+    isRunning=false;
+    document.getElementById("start-btn").disabled=false;
+    document.getElementById("stop-btn").disabled=true;
+    if(video.srcObject) video.srcObject.getTracks().forEach(t=>t.stop());
+    if(carInterval) clearInterval(carInterval);
+    stopAlert();
+    log("System stopped.");
+  }
+
+  async function startDriver(room){
+    log("Starting driver...");
+    const stream=await navigator.mediaDevices.getUserMedia({video:true});
+    video.srcObject=stream;
+    video.onloadeddata=async()=>{
+      canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+      model=await facemesh.load({maxFaces:1});
+      log("FaceMesh loaded. Starting detection...");
+      detectLoop(room);
+    };
+  }
+
+  async function detectLoop(room){
+    if(!isRunning) return;
+    const preds=await model.estimateFaces({input:video});
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    frameCounter++;
+
+    if(preds.length>0){
+      const lm=preds[0].scaledMesh;
+      const L=[33,160,158,133,153,144], R=[362,385,387,263,373,380];
+      const ear=(EAR(lm,L)+EAR(lm,R))/2;
+      document.getElementById("ear-display").textContent=`EAR: ${ear.toFixed(2)} | Frames: ${drowsyCounter}`;
+      
+      // Save frame data
+      saveToDB(room,"frames",{timestamp:new Date().toISOString(), ear});
+
+      if(ear<EAR_THRESHOLD){
+        drowsyCounter++;
+        if(drowsyCounter>=CONSECUTIVE_FRAMES){ triggerAlert(room,ear); drowsyCounter=0; }
+      } else {
+        drowsyCounter=0;
+      }
+    }
+    requestAnimationFrame(()=>detectLoop(room));
+  }
+
+  async function triggerAlert(room,ear){
+    log("⚠️ Drowsiness detected!");
+    saveToDB(room,"alerts",{timestamp:new Date().toISOString(), type:"drowsiness", ear});
+  }
+
+  async function saveToDB(room,key,obj){
+    try{
+      const res=await fetch(JSONBIN_URL,{headers:{'X-Master-Key':JSONBIN_API_KEY}});
+      const data=await res.json();
+      const sessions=data.record.sessions||{};
+      sessions[room]=sessions[room]||{alerts:[],sos:[],frames:[]};
+      sessions[room][key].push(obj);
+      await fetch(JSONBIN_URL,{method:"PUT",headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_API_KEY},body:JSON.stringify({sessions})});
+      log(`Saved ${key} to DB`);
+    }catch(e){ log("DB error: "+e.message); }
+  }
+
+  // === Car role ===
+  function startCar(room){
+    log("Car listening...");
+    carInterval=setInterval(()=>pollAlerts(room),POLL_INTERVAL);
+  }
+
+  async function pollAlerts(room){
+    try{
+      const res=await fetch(JSONBIN_URL,{headers:{'X-Master-Key':JSONBIN_API_KEY}});
+      const data=await res.json();
+      const alerts=data.record.sessions?.[room]?.alerts||[];
+      if(alerts.length>lastAlertCount){
+        lastAlertCount=alerts.length;
+        showAlert();
+      }
+    }catch(e){ log("Poll error: "+e.message); }
+  }
+
+  function showAlert(){
+    log("🚨 Alert received!");
+    document.getElementById("alert").style.display="block";
+    document.getElementById("ack-btn").style.display="block";
+    beep(); vibrate();
+    alertTimer=setTimeout(()=>escalateSOS(),ALERT_TIMEOUT);
+  }
+
+  function stopAlert(){
+    document.getElementById("alert").style.display="none";
+    document.getElementById("ack-btn").style.display="none";
+    if(alertTimer) clearTimeout(alertTimer);
+  }
+
+  function beep(){
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.type="sine"; osc.frequency.setValueAtTime(440,ctx.currentTime);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.5);
+  }
+
+  function vibrate(){ if(navigator.vibrate) navigator.vibrate([200,100,200]); }
+
+  async function escalateSOS(){
+    log("🚨 SOS escalating...");
+    saveToDB(document.getElementById("room-id").value,"sos",{timestamp:new Date().toISOString(),msg:"SOS triggered"});
+    alert("🚨 SOS ACTIVATED 🚨");
+    stopAlert();
+  }
+  </script>
+</body>
+</html>
+
