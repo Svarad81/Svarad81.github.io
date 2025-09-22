@@ -53,6 +53,10 @@
     <pre id="log"></pre>
   </div>
 
+  <!-- New Audio element for the SOS MP3 song -->
+  <!-- IMPORTANT: Replace 'path/to/your/song.mp3' with the actual URL to your audio file -->
+  <audio id="sos-sound" src="music.mp3" loop></audio>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   <!-- NEW MODEL: Using BlazeFace for robust face detection -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
@@ -82,6 +86,7 @@
   const $log = document.getElementById('log');
   const $alert = document.getElementById('alert');
   const $ack = document.getElementById('ack');
+  const $sosSound = document.getElementById('sos-sound');
 
   // --- State Variables ---
   let role = null;
@@ -117,6 +122,8 @@
         if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
+        // Also unlock the MP3 player
+        $sosSound.play().then(() => $sosSound.pause()).catch(e => log('MP3 player needs interaction.'));
         log('Audio permissions granted. Ready for alerts.');
       } catch(e) {
         log('Failed to initialize audio: ' + e.message);
@@ -307,7 +314,8 @@
     
     const alertAction = () => {
       playUrgentBeep();
-      if(navigator.vibrate) navigator.vibrate([400, 100, 400]);
+      // Fast, continuous vibration
+      if(navigator.vibrate) navigator.vibrate([200, 50, 200, 50, 200, 50, 200]);
     };
     
     // Clear any existing alert interval to avoid overlap
@@ -316,6 +324,12 @@
     // Start a new, faster alert interval
     alertAction(); // Trigger immediately
     alertInterval = setInterval(alertAction, 1000); // Repeat every second
+
+    // Play MP3 song after the second alert
+    if (lastAlertCount >= 3) {
+      log('Playing SOS MP3 sound...');
+      $sosSound.play();
+    }
 
     if(alertTimer) clearTimeout(alertTimer);
     alertTimer = setTimeout(()=>escalateSOS(), 7000); // Faster SOS escalation
@@ -326,6 +340,10 @@
     $ack.style.display='none';
     if(alertTimer) clearTimeout(alertTimer);
     if(alertInterval) clearInterval(alertInterval); // Stop the repeating alert
+    
+    // Stop the MP3 sound and reset it
+    $sosSound.pause();
+    $sosSound.currentTime = 0;
   }
 
   async function escalateSOS(){
@@ -372,3 +390,5 @@
   </script>
 </body>
 </html>
+
+
