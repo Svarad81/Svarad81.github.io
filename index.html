@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -39,7 +40,7 @@
       <video id="video" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
     </div>
-    <p id="status">EAR: -- | Consecutive: 0 | Frames analyzed: 0</p>
+    <p id="status">Status: Initializing...</p>
   </div>
 
   <div id="carBox" class="box" style="display:none">
@@ -54,8 +55,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.5/dist/face-landmarks-detection.min.js"></script>
-
+  <!-- NEW MODEL: Using BlazeFace for robust face detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+  
   <script>
   // ===== CONFIG: JSONBin values =====
   const JSONBIN_MASTER_KEY = "$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq";
@@ -64,8 +66,7 @@
   // ===================================
 
   // --- Parameters (Tunable) ---
-  const EAR_THRESHOLD = 0.26;
-  const CONSEC_FRAMES = 15;
+  const ABSENT_FRAMES_THRESHOLD = 25; // Trigger alert after 25 frames with no face
   const POLL_MS = 3000;
 
   // --- DOM Elements ---
@@ -87,8 +88,7 @@
   let role = null;
   let running = false;
   let model = null;
-  let drowsyCount = 0;
-  let analyzedFrames = 0;
+  let absentCount = 0; // Counts consecutive frames where no face is detected
   let lastAlertCount = 0;
   let pollIntervalId = null;
   let alertTimer = null;
@@ -113,8 +113,8 @@
   };
   $stop.onclick = () => { stopAll(); };
   $ack.onclick = () => { stopAlert(); log('Alert acknowledged by user.'); };
-
-  // ---------- DRIVER (Camera + Detection) ----------
+  
+  // --- DRIVER (Camera + Detection) ----------
   async function startDriver(room){
     log('Requesting camera permission...');
     try{
@@ -137,44 +137,15 @@
       await tf.setBackend('webgl');
       log('TensorFlow.js backend set to WebGL.');
 
-      log('Loading face landmarks detection model from local path...');
-      // **MODIFIED**: Configure detector to load the model from the local './model/' directory.
-      const modelConfig = {
-        runtime: 'tfjs',
-        modelUrl: './model/model.json', // This tells the detector to look for model.json in the /model/ folder
-        maxFaces: 1
-      };
+      log('Loading BlazeFace model...');
+      model = await blazeface.load();
+      log('BlazeFace model loaded successfully.');
       
-      model = await faceLandmarksDetection.createDetector(
-          faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-          modelConfig
-      );
-      log('Model loaded successfully.');
-
       detectLoop(room);
     }catch(err){
       log('ERROR starting driver mode: ' + err);
       console.error(err);
     }
-  }
-
-  function dist(p1, p2){
-    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
-  }
-
-  function computeEAR(landmarks, eyeIndices){
-    const p1 = landmarks[eyeIndices[0]];
-    const p2 = landmarks[eyeIndices[1]];
-    const p3 = landmarks[eyeIndices[2]];
-    const p4 = landmarks[eyeIndices[3]];
-    const p5 = landmarks[eyeIndices[4]];
-    const p6 = landmarks[eyeIndices[5]];
-
-    const verticalDist = dist(p2, p6) + dist(p3, p5);
-    const horizontalDist = dist(p1, p4);
-
-    if (horizontalDist === 0) return 0;
-    return verticalDist / (2.0 * horizontalDist);
   }
 
   async function detectLoop(room){
@@ -184,45 +155,36 @@
       return;
     }
 
-    let faces = [];
-    try{
-      faces = await model.estimateFaces($video, {flipHorizontal: false});
-    }catch(e){
-      log('estimateFaces error: '+e.message);
-    }
-
-    console.log(`Faces detected: ${faces.length}`);
+    const faces = await model.estimateFaces($video, false);
+    
     const ctx = $overlay.getContext('2d');
     ctx.clearRect(0,0,$overlay.width,$overlay.height);
 
-    if(faces && faces.length > 0){
-      analyzedFrames++;
-      const landmarks = faces[0].keypoints;
+    if(faces.length > 0){
+      // Face detected
+      absentCount = 0;
+      $status.textContent = `Status: Face Detected | Frames Absent: ${absentCount}`;
+      
+      // Draw bounding box for visual feedback
+      const face = faces[0];
+      const start = face.topLeft;
+      const end = face.bottomRight;
+      const size = [end[0] - start[0], end[1] - start[1]];
 
-      const LEFT_EYE_INDICES = [33, 160, 158, 133, 153, 144];
-      const RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380];
+      ctx.strokeStyle = 'aqua';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(start[0], start[1], size[0], size[1]);
 
-      if(landmarks && landmarks.length > 0){
-        const leftEAR = computeEAR(landmarks, LEFT_EYE_INDICES);
-        const rightEAR = computeEAR(landmarks, RIGHT_EYE_INDICES);
-        const ear = (leftEAR + rightEAR) / 2.0;
-
-        console.log(`EAR: ${ear.toFixed(3)}, Consecutive Frames: ${drowsyCount}`);
-        $status.textContent = `EAR: ${ear.toFixed(3)} | Consecutive: ${drowsyCount} | Frames analyzed: ${analyzedFrames}`;
-        
-        if(ear < EAR_THRESHOLD){
-          drowsyCount++;
-        } else {
-          drowsyCount = 0; 
-        }
-
-        if(drowsyCount === CONSEC_FRAMES){
-          log('DROWSINESS DETECTED: Sending alert.');
-          saveAlertToDB(room, {timestamp: new Date().toISOString(), type: 'drowsiness', ear});
-        }
-      }
     } else {
-      $status.textContent = `EAR: -- | Consecutive: ${drowsyCount} | Frames analyzed: ${analyzedFrames}`;
+      // No face detected
+      absentCount++;
+      $status.textContent = `Status: NO FACE DETECTED | Frames Absent: ${absentCount}`;
+
+      if(absentCount >= ABSENT_FRAMES_THRESHOLD){
+        log('DROWSINESS/ABSENCE DETECTED: Sending alert.');
+        saveAlertToDB(room, {timestamp: new Date().toISOString(), type: 'absence_drowsiness'});
+        absentCount = 0; // Reset after sending alert
+      }
     }
 
     requestAnimationFrame(()=>detectLoop(room));
@@ -322,7 +284,7 @@
 
   // --- Initial Check on Load ---
   (function(){
-    if(!location.protocol.startsWith('https') && !['localhost', '127.0.0.1'].includes(location.hostname)){
+    if(!location.protocol.startsWith('https' ) && !['localhost', '127.0.0.1'].includes(location.hostname)){
       log('⚠️ WARNING: Camera access requires a secure context (HTTPS) or localhost. The app may not work.');
     } else {
       log('App ready.');
@@ -331,5 +293,4 @@
   </script>
 </body>
 </html>
-
 
