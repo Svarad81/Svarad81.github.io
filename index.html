@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -92,6 +91,7 @@
   let lastAlertCount = 0;
   let pollIntervalId = null;
   let alertTimer = null;
+  let audioCtx = null; // To hold the audio context for alerts
 
   function log(msg){
     const t = new Date().toLocaleTimeString();
@@ -227,6 +227,18 @@
   // ---------- CAR (Listener) Role ----------
   function startCar(room){
     log('Car mode started. Polling for alerts...');
+    // Create and unlock AudioContext on user gesture (start button click)
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        log('AudioContext initialized for alerts.');
+      } catch(e) {
+        log('Failed to initialize AudioContext: ' + e.message);
+      }
+    }
     pollIntervalId = setInterval(()=>pollAlerts(room), POLL_MS);
   }
 
@@ -245,7 +257,29 @@
     log('ALERT received by car!');
     $alert.style.display='block';
     $ack.style.display='inline-block';
-    try{ const ac = new (window.AudioContext||window.webkitAudioContext)(); const o = ac.createOscillator(); const g = ac.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.4, ac.currentTime+0.01); o.start(); setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+0.15); setTimeout(()=>o.stop(),200); }, 400);}catch(e){ log('Beep failed '+e.message); }
+    // Use the pre-initialized AudioContext to ensure sound can play
+    if(audioCtx){
+      try{ 
+        const o = audioCtx.createOscillator(); 
+        const g = audioCtx.createGain(); 
+        o.type='sine'; 
+        o.frequency.value=880; 
+        o.connect(g); 
+        g.connect(audioCtx.destination); 
+        g.gain.setValueAtTime(0.0001, audioCtx.currentTime); 
+        g.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime+0.01); 
+        o.start(); 
+        setTimeout(()=>{ 
+          g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.15); 
+          setTimeout(()=>o.stop(),200); 
+        }, 400);
+      }catch(e){ 
+        log('Beep failed '+e.message); 
+      }
+    } else {
+      log('AudioContext not ready, cannot play beep.');
+    }
+
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     if(alertTimer) clearTimeout(alertTimer);
     alertTimer = setTimeout(()=>escalateSOS(), 15000);
@@ -278,6 +312,10 @@
     if($video.srcObject){ $video.srcObject.getTracks().forEach(t=>t.stop()); }
     if(pollIntervalId) clearInterval(pollIntervalId);
     stopAlert();
+    if (audioCtx && audioCtx.state !== 'closed') {
+      audioCtx.close();
+      audioCtx = null;
+    }
     $start.disabled=false; $stop.disabled=true;
     log('Stopped all operations.');
   }
