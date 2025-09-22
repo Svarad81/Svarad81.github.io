@@ -1,21 +1,26 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf--8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Drowsiness Detector (fixed)</title>
+  <title>Drowsiness Detector (Fixed)</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;padding:12px;max-width:900px;margin:0 auto}
-    .row{display:flex;gap:8px;align-items:center;margin:8px 0}
-    video{width:100%;max-height:360px;border-radius:8px;transform:scaleX(-1);display:block}
-    canvas{position:absolute;left:0;top:0}
-    .box{background:#fff;padding:12px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:12px}
-    pre{background:#111;color:#b8ffb8;padding:10px;border-radius:8px;height:180px;overflow:auto}
-    #alert{display:none;background:#ffdddd;border:2px solid #ff5a5a;padding:10px;border-radius:8px;text-align:center;font-weight:700}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;padding:12px;max-width:900px;margin:0 auto; background-color: #f0f2f5;}
+    .row{display:flex;flex-wrap: wrap; gap:8px;align-items:center;margin:8px 0}
+    video{width:100%;max-height:480px;border-radius:8px;transform:scaleX(-1);display:block; background-color: #000;}
+    canvas{position:absolute;left:0;top:0; width: 100%; height: 100%;}
+    .box{background:#fff;padding:12px;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,.1);margin-bottom:12px}
+    pre{background:#1e1e1e;color:#d4d4d4;padding:10px;border-radius:8px;height:180px;overflow:auto; font-family: 'Courier New', Courier, monospace;}
+    #alert{display:none;background:#ffdddd;border:2px solid #ff5a5a;padding:10px;border-radius:8px;text-align:center;font-weight:700; color: #d8000c;}
+    button { background-color: #4a90e2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; transition: background-color: 0.3s; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    button:hover:not(:disabled) { background-color: #357abd; }
+    input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    #video-container { position: relative; width: 100%; max-width: 640px; margin: auto; }
   </style>
 </head>
 <body>
-  <h1>Drowsiness Detection — fixed</h1>
+  <h1>Drowsiness Detection</h1>
 
   <div class="box">
     <div class="row">
@@ -25,12 +30,12 @@
       <button id="start" disabled>Start</button>
       <button id="stop" disabled>Stop</button>
     </div>
-    <small>Make sure you host on HTTPS (GitHub Pages) or run on localhost so camera works.)</small>
+    <small>Note: This app requires HTTPS or localhost for camera access.</small>
   </div>
 
   <div id="driverBox" class="box" style="display:none">
     <h3>Driver (Camera)</h3>
-    <div style="position:relative">
+    <div id="video-container">
       <video id="video" autoplay playsinline muted></video>
       <canvas id="overlay"></canvas>
     </div>
@@ -48,27 +53,22 @@
     <pre id="log"></pre>
   </div>
 
-  <!-- TensorFlow.js -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-
-<!-- Face landmarks detection (latest working CDN build) -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.3/dist/face-landmarks-detection.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.5/dist/face-landmarks-detection.min.js"></script>
 
   <script>
-  // ===== CONFIG: put your JSONBin values here =====
+  // ===== CONFIG: JSONBin values =====
   const JSONBIN_MASTER_KEY = "$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq";
   const JSONBIN_BIN_ID    = "68cefa56d0ea881f408475ab";
   const JSONBIN_URL       = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-  // =================================================
+  // ===================================
 
-  // PARAMETERS (tuneable)
-  const EAR_THRESHOLD = 0.26;         // default threshold (try 0.26 - 0.28)
-  const CONSEC_FRAMES = 15;           // you asked for 15 consecutive frames
-  const POLL_MS = 3000;               // car polls every 3s
-  const FRAME_DB_FREQ = 5;            // push frame to DB every N frames (reduce rate)
+  // --- Parameters (Tunable) ---
+  const EAR_THRESHOLD = 0.26;
+  const CONSEC_FRAMES = 15;
+  const POLL_MS = 3000;
 
-  // DOM
+  // --- DOM Elements ---
   const $room = document.getElementById('room');
   const $roleDriver = document.getElementById('roleDriver');
   const $roleCar = document.getElementById('roleCar');
@@ -83,79 +83,98 @@
   const $alert = document.getElementById('alert');
   const $ack = document.getElementById('ack');
 
-  // state
+  // --- State Variables ---
   let role = null;
   let running = false;
   let model = null;
   let drowsyCount = 0;
   let analyzedFrames = 0;
-  let frameCounter = 0;
   let lastAlertCount = 0;
   let pollIntervalId = null;
   let alertTimer = null;
 
   function log(msg){
     const t = new Date().toLocaleTimeString();
-    $log.textContent = `[${t}] ${msg}\n` + $log.textContent;
-    console.log(msg);
+    const logMsg = `[${t}] ${msg}`;
+    $log.textContent = logMsg + '\n' + $log.textContent;
+    console.log(logMsg);
   }
 
-  // role buttons
-  $roleDriver.onclick = () => { role='driver'; $driverBox.style.display='block'; $carBox.style.display='none'; $start.disabled=false; log("Role: DRIVER"); };
-  $roleCar.onclick = () =>    { role='car'; $carBox.style.display='block'; $driverBox.style.display='none'; $start.disabled=false; log("Role: CAR"); };
+  // --- Event Listeners ---
+  $roleDriver.onclick = () => { role='driver'; $driverBox.style.display='block'; $carBox.style.display='none'; $start.disabled=false; log("Role selected: DRIVER"); };
+  $roleCar.onclick = () =>    { role='car'; $carBox.style.display='block'; $driverBox.style.display='none'; $start.disabled=false; log("Role selected: CAR"); };
 
   $start.onclick = async () => {
-    if(!role){ alert('Pick a role'); return; }
-    if(!$room.value){ alert('Enter room ID'); return; }
+    if(!role){ alert('Please pick a role first.'); return; }
+    if(!$room.value){ alert('Please enter a room ID.'); return; }
     running = true; $start.disabled=true; $stop.disabled=false;
     if(role==='driver'){ await startDriver($room.value); }
     else startCar($room.value);
   };
   $stop.onclick = () => { stopAll(); };
+  $ack.onclick = () => { stopAlert(); log('Alert acknowledged by user.'); };
 
-  $ack.onclick = () => { stopAlert(); log('Alert acknowledged'); };
-
-  // ---------- DRIVER (camera + detection) ----------
+  // ---------- DRIVER (Camera + Detection) ----------
   async function startDriver(room){
     log('Requesting camera permission...');
     try{
-      // try front camera; fallback to any camera
       let stream = null;
-      try { stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}); }
-      catch(e){ log('Front camera failed, trying default: '+e.message); stream = await navigator.mediaDevices.getUserMedia({video:true}); }
-
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+      } catch(e){
+        log('Front camera failed, trying default camera: '+e.message);
+        stream = await navigator.mediaDevices.getUserMedia({video:true});
+      }
+      log('Camera permission granted.');
+      
       $video.srcObject = stream;
-      await $video.play();
-      // set canvas size
+      await new Promise(resolve => $video.onloadedmetadata = resolve);
+
       $overlay.width = $video.videoWidth;
       $overlay.height = $video.videoHeight;
-      log(`Camera started ${$video.videoWidth}x${$video.videoHeight}`);
+      log(`Camera started with resolution ${$video.videoWidth}x${$video.videoHeight}`);
 
-      // load model (face-landmarks-detection)
-      log('Loading face-landmarks-detection model...');
-      model = await faceLandmarksDetection.load(faceLandmarksDetection.SupportedPackages.mediapipeFacemesh);
-      log('Model loaded.');
+      await tf.setBackend('webgl');
+      log('TensorFlow.js backend set to WebGL.');
 
-      // start loop
+      log('Loading face landmarks detection model from local path...');
+      // **MODIFIED**: Configure detector to load the model from the local './model/' directory.
+      const modelConfig = {
+        runtime: 'tfjs',
+        modelUrl: './model/model.json', // This tells the detector to look for model.json in the /model/ folder
+        maxFaces: 1
+      };
+      
+      model = await faceLandmarksDetection.createDetector(
+          faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
+          modelConfig
+      );
+      log('Model loaded successfully.');
+
       detectLoop(room);
     }catch(err){
-      log('Camera/model error: ' + err.message);
-      alert('Camera or model failed: ' + err.message);
+      log('ERROR starting driver mode: ' + err);
+      console.error(err);
     }
   }
 
-  // helper distances (landmarks come as [x,y,z] in pixels in this API)
-  function dist(a,b){
-    const dx = a[0]-b[0]; const dy = a[1]-b[1]; return Math.hypot(dx,dy);
+  function dist(p1, p2){
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
   }
-  function computeEAR(lm, idx){
-    // idx is [p1,p2,p3,p4,p5,p6]
-    const p1 = lm[idx[0]], p2 = lm[idx[1]], p3 = lm[idx[2]], p4 = lm[idx[3]], p5 = lm[idx[4]], p6 = lm[idx[5]];
-    const A = dist(p2,p6);
-    const B = dist(p3,p5);
-    const C = dist(p1,p4);
-    if(C === 0) return 0;
-    return (A+B)/(2.0*C);
+
+  function computeEAR(landmarks, eyeIndices){
+    const p1 = landmarks[eyeIndices[0]];
+    const p2 = landmarks[eyeIndices[1]];
+    const p3 = landmarks[eyeIndices[2]];
+    const p4 = landmarks[eyeIndices[3]];
+    const p5 = landmarks[eyeIndices[4]];
+    const p6 = landmarks[eyeIndices[5]];
+
+    const verticalDist = dist(p2, p6) + dist(p3, p5);
+    const horizontalDist = dist(p1, p4);
+
+    if (horizontalDist === 0) return 0;
+    return verticalDist / (2.0 * horizontalDist);
   }
 
   async function detectLoop(room){
@@ -165,125 +184,94 @@
       return;
     }
 
-    // estimate faces
-    let predictions = [];
+    let faces = [];
     try{
-      predictions = await model.estimateFaces({input: $video});
+      faces = await model.estimateFaces($video, {flipHorizontal: false});
     }catch(e){
       log('estimateFaces error: '+e.message);
     }
 
-    // draw basic overlay & debug
+    console.log(`Faces detected: ${faces.length}`);
     const ctx = $overlay.getContext('2d');
     ctx.clearRect(0,0,$overlay.width,$overlay.height);
 
-    frameCounter++;
-    if(predictions && predictions.length>0){
+    if(faces && faces.length > 0){
       analyzedFrames++;
-      const face = predictions[0];
-      const lm = face.scaledMesh || face.mesh || []; // array of [x,y,z]
+      const landmarks = faces[0].keypoints;
 
-      // indices for EAR (MediaPipe mapping)
-      const LEFT = [33,160,158,133,153,144];
-      const RIGHT = [362,385,387,263,373,380];
+      const LEFT_EYE_INDICES = [33, 160, 158, 133, 153, 144];
+      const RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380];
 
-      // guard: ensure indices exist
-      if(lm.length > 400){
-        const leftEAR = computeEAR(lm, LEFT);
-        const rightEAR = computeEAR(lm, RIGHT);
-        const ear = (leftEAR + rightEAR)/2;
-        // update UI
+      if(landmarks && landmarks.length > 0){
+        const leftEAR = computeEAR(landmarks, LEFT_EYE_INDICES);
+        const rightEAR = computeEAR(landmarks, RIGHT_EYE_INDICES);
+        const ear = (leftEAR + rightEAR) / 2.0;
+
+        console.log(`EAR: ${ear.toFixed(3)}, Consecutive Frames: ${drowsyCount}`);
         $status.textContent = `EAR: ${ear.toFixed(3)} | Consecutive: ${drowsyCount} | Frames analyzed: ${analyzedFrames}`;
-
-        // draw small marker
-        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(6,6,140,28);
-        ctx.fillStyle='white'; ctx.font='14px monospace';
-        ctx.fillText(`EAR:${ear.toFixed(3)} f:${analyzedFrames}`, 10, 26);
-
-        // persist frames occasionally to DB (reduce requests)
-        if(frameCounter % FRAME_DB_FREQ === 0){
-          saveFrameToDB(room, {timestamp:new Date().toISOString(), ear});
-        }
-
-        // detection logic
+        
         if(ear < EAR_THRESHOLD){
           drowsyCount++;
-          if(drowsyCount >= CONSEC_FRAMES){
-            drowsyCount = 0;
-            log('DROWSINESS: threshold crossed, sending alert');
-            saveAlertToDB(room, {timestamp:new Date().toISOString(), type:'drowsiness', ear});
-          }
         } else {
-          drowsyCount = 0;
+          drowsyCount = 0; 
         }
-      } else {
-        // not enough landmarks yet
-        $status.textContent = `EAR: -- | Consecutive: ${drowsyCount} | Frames analyzed: ${analyzedFrames}`;
+
+        if(drowsyCount === CONSEC_FRAMES){
+          log('DROWSINESS DETECTED: Sending alert.');
+          saveAlertToDB(room, {timestamp: new Date().toISOString(), type: 'drowsiness', ear});
+        }
       }
     } else {
-      // no face
       $status.textContent = `EAR: -- | Consecutive: ${drowsyCount} | Frames analyzed: ${analyzedFrames}`;
     }
 
-    // continue
     requestAnimationFrame(()=>detectLoop(room));
   }
 
-  // ---------- JSONBin helpers ----------
-  async function safeFetchGet(){
-    const res = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_MASTER_KEY } });
-    if(!res.ok) throw new Error(`GET ${res.status} ${res.statusText}`);
+  // ---------- JSONBin Communication ----------
+  async function safeFetch(url, options) {
+    const res = await fetch(url, options);
+    log(`JSONBin ${options.method || 'GET'} Status: ${res.status} ${res.statusText}`);
+    if (!res.ok) throw new Error(`HTTP error! ${res.status} ${res.statusText}`);
     return await res.json();
   }
 
-  async function safeFetchPut(recordObj){
-    const res = await fetch(JSONBIN_URL, {
+  async function getBin() {
+    return await safeFetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_MASTER_KEY } });
+  }
+
+  async function updateBin(recordObj) {
+    return await safeFetch(JSONBIN_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_MASTER_KEY },
       body: JSON.stringify(recordObj)
     });
-    if(!res.ok) throw new Error(`PUT ${res.status} ${res.statusText}`);
-    return await res.json();
-  }
-
-  async function saveFrameToDB(room, frameObj){
-    try{
-      const bin = await safeFetchGet();
-      const record = bin.record || {};
-      record.sessions = record.sessions || {};
-      record.sessions[room] = record.sessions[room] || { frames:[], alerts:[], sos:[] };
-      record.sessions[room].frames.push(frameObj);
-      await safeFetchPut(record);
-      log(`Frame saved (ear=${frameObj.ear.toFixed(3)})`);
-    }catch(e){
-      log('Frame save failed: '+ e.message);
-    }
   }
 
   async function saveAlertToDB(room, alertObj){
     try{
-      const bin = await safeFetchGet();
+      const bin = await getBin();
       const record = bin.record || {};
       record.sessions = record.sessions || {};
       record.sessions[room] = record.sessions[room] || { frames:[], alerts:[], sos:[] };
       record.sessions[room].alerts.push(alertObj);
-      await safeFetchPut(record);
-      log('Alert saved to DB');
+      await updateBin(record);
+      log('Alert saved to DB successfully.');
     }catch(e){
       log('Alert save failed: '+ e.message);
     }
   }
 
-  // ---------- CAR role ----------
+  // ---------- CAR (Listener) Role ----------
   function startCar(room){
-    log('Car polling for alerts...');
+    log('Car mode started. Polling for alerts...');
     pollIntervalId = setInterval(()=>pollAlerts(room), POLL_MS);
   }
 
   async function pollAlerts(room){
     try{
-      const bin = await safeFetchGet();
-      const alerts = (bin.record && bin.record.sessions && bin.record.sessions[room] && bin.record.sessions[room].alerts) || [];
+      const bin = await getBin();
+      const alerts = (bin.record?.sessions?.[room]?.alerts) || [];
       if(alerts.length > lastAlertCount){
         lastAlertCount = alerts.length;
         showAlert();
@@ -292,10 +280,9 @@
   }
 
   function showAlert(){
-    log('ALERT received by car');
+    log('ALERT received by car!');
     $alert.style.display='block';
     $ack.style.display='inline-block';
-    // beep + vibrate
     try{ const ac = new (window.AudioContext||window.webkitAudioContext)(); const o = ac.createOscillator(); const g = ac.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.4, ac.currentTime+0.01); o.start(); setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+0.15); setTimeout(()=>o.stop(),200); }, 400);}catch(e){ log('Beep failed '+e.message); }
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     if(alertTimer) clearTimeout(alertTimer);
@@ -310,46 +297,39 @@
 
   async function escalateSOS(){
     const room = $room.value;
-    log('Escalating to SOS (write to DB)');
+    log('Escalating to SOS (unacknowledged alert)');
     const sos = { timestamp:new Date().toISOString(), msg:'SOS (unacknowledged)' };
     try{
-      const bin = await safeFetchGet();
+      const bin = await getBin();
       const record = bin.record || {};
       record.sessions = record.sessions || {};
       record.sessions[room] = record.sessions[room] || { frames:[], alerts:[], sos:[] };
       record.sessions[room].sos.push(sos);
-      await safeFetchPut(record);
-      alert('SOS logged in DB. Please contact emergency services manually.');
+      await updateBin(record);
       stopAlert();
     }catch(e){ log('SOS save failed: '+ e.message); }
   }
 
-  // ---------- stop all ----------
+  // ---------- General Control ----------
   function stopAll(){
     running = false;
     if($video.srcObject){ $video.srcObject.getTracks().forEach(t=>t.stop()); }
     if(pollIntervalId) clearInterval(pollIntervalId);
     stopAlert();
     $start.disabled=false; $stop.disabled=true;
-    log('Stopped all.');
+    log('Stopped all operations.');
   }
 
-  // Helpful startup check
+  // --- Initial Check on Load ---
   (function(){
-    if(JSONBIN_MASTER_KEY.includes('YOUR_') || JSONBIN_BIN_ID.includes('YOUR_')){
-      log('⚠️ Replace JSONBIN_MASTER_KEY and JSONBIN_BIN_ID at top of file with your values.');
+    if(!location.protocol.startsWith('https') && !['localhost', '127.0.0.1'].includes(location.hostname)){
+      log('⚠️ WARNING: Camera access requires a secure context (HTTPS) or localhost. The app may not work.');
     } else {
-      log('JSONBin configured. Ready.');
-    }
-    // verify secure context (camera needs HTTPS/localhost)
-    if(!location.protocol.startsWith('https') && location.hostname !== 'localhost'){
-      log('⚠️ Warning: getUserMedia requires a secure context (HTTPS) or localhost. Camera may not work on file:// or plain http.');
+      log('App ready.');
     }
   })();
   </script>
 </body>
 </html>
-
-
 
 
