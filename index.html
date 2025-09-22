@@ -92,6 +92,7 @@
   let pollIntervalId = null;
   let alertTimer = null;
   let audioCtx = null; // To hold the audio context for alerts
+  let alertInterval = null; // To control the repeating alert sound/vibration
 
   function log(msg){
     const t = new Date().toLocaleTimeString();
@@ -273,42 +274,58 @@
     }
   }
 
+  function playUrgentBeep() {
+    if(audioCtx){
+      try {
+        const playBeep = (freq, startTime, duration) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'triangle';
+          o.frequency.value = freq;
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          g.gain.setValueAtTime(0, startTime);
+          g.gain.linearRampToValueAtTime(0.5, startTime + 0.05);
+          g.gain.linearRampToValueAtTime(0, startTime + duration);
+          o.start(startTime);
+          o.stop(startTime + duration);
+        };
+        const now = audioCtx.currentTime;
+        playBeep(1200, now, 0.1);
+        playBeep(1200, now + 0.15, 0.1);
+        playBeep(1200, now + 0.3, 0.1);
+      } catch(e) {
+        log('Beep failed: ' + e.message);
+      }
+    }
+  }
+
   function showAlert(){
     log('ALERT received by car!');
     $alert.style.display='block';
     $ack.style.display='inline-block';
-    // Use the pre-initialized AudioContext to ensure sound can play
-    if(audioCtx){
-      try{ 
-        const o = audioCtx.createOscillator(); 
-        const g = audioCtx.createGain(); 
-        o.type='sine'; 
-        o.frequency.value=880; 
-        o.connect(g); 
-        g.connect(audioCtx.destination); 
-        g.gain.setValueAtTime(0.0001, audioCtx.currentTime); 
-        g.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime+0.01); 
-        o.start(); 
-        setTimeout(()=>{ 
-          g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.15); 
-          setTimeout(()=>o.stop(),200); 
-        }, 400);
-      }catch(e){ 
-        log('Beep failed '+e.message); 
-      }
-    } else {
-      log('AudioContext not ready, cannot play beep.');
-    }
+    
+    const alertAction = () => {
+      playUrgentBeep();
+      if(navigator.vibrate) navigator.vibrate([400, 100, 400]);
+    };
+    
+    // Clear any existing alert interval to avoid overlap
+    if (alertInterval) clearInterval(alertInterval);
+    
+    // Start a new, faster alert interval
+    alertAction(); // Trigger immediately
+    alertInterval = setInterval(alertAction, 1000); // Repeat every second
 
-    if(navigator.vibrate) navigator.vibrate([200,100,200]);
     if(alertTimer) clearTimeout(alertTimer);
-    alertTimer = setTimeout(()=>escalateSOS(), 15000);
+    alertTimer = setTimeout(()=>escalateSOS(), 7000); // Faster SOS escalation
   }
 
   function stopAlert(){
     $alert.style.display='none';
     $ack.style.display='none';
     if(alertTimer) clearTimeout(alertTimer);
+    if(alertInterval) clearInterval(alertInterval); // Stop the repeating alert
   }
 
   async function escalateSOS(){
@@ -323,6 +340,10 @@
       record.sessions[room].sos.push(sos);
       await updateBin(record);
       stopAlert();
+      $alert.innerHTML = "🚨 **SOS LOGGED!** 🚨<br>Contact emergency services manually.";
+      $alert.style.display = 'block';
+      $alert.style.background = '#990000';
+      $alert.style.color = 'white';
     }catch(e){ log('SOS save failed: '+ e.message); }
   }
 
@@ -351,4 +372,3 @@
   </script>
 </body>
 </html>
-
