@@ -102,7 +102,26 @@
 
   // --- Event Listeners ---
   $roleDriver.onclick = () => { role='driver'; $driverBox.style.display='block'; $carBox.style.display='none'; $start.disabled=false; log("Role selected: DRIVER"); };
-  $roleCar.onclick = () =>    { role='car'; $carBox.style.display='block'; $driverBox.style.display='none'; $start.disabled=false; log("Role selected: CAR"); };
+  
+  $roleCar.onclick = () => {
+    role='car'; 
+    $carBox.style.display='block'; 
+    $driverBox.style.display='none'; 
+    $start.disabled=false; 
+    log("Role selected: CAR");
+    // **MODIFIED**: Create and unlock AudioContext on user gesture (role selection)
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        log('Audio permissions granted. Ready for alerts.');
+      } catch(e) {
+        log('Failed to initialize audio: ' + e.message);
+      }
+    }
+  };
 
   $start.onclick = async () => {
     if(!role){ alert('Please pick a role first.'); return; }
@@ -220,24 +239,19 @@
       await updateBin(record);
       log('Alert saved to DB successfully.');
     }catch(e){
-      log('Alert save failed: '+ e.message);
+      let errorMsg = e.message;
+      if (errorMsg.includes('Failed to fetch')) {
+          errorMsg += ' (Check internet/CORS/ad-blocker)';
+      }
+      log('Alert save failed: '+ errorMsg);
     }
   }
 
   // ---------- CAR (Listener) Role ----------
   function startCar(room){
     log('Car mode started. Polling for alerts...');
-    // Create and unlock AudioContext on user gesture (start button click)
     if (!audioCtx) {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        log('AudioContext initialized for alerts.');
-      } catch(e) {
-        log('Failed to initialize AudioContext: ' + e.message);
-      }
+        log('WARNING: Audio not initialized. Alerts might be silent. Try re-selecting the CAR role.');
     }
     pollIntervalId = setInterval(()=>pollAlerts(room), POLL_MS);
   }
@@ -250,7 +264,13 @@
         lastAlertCount = alerts.length;
         showAlert();
       }
-    }catch(e){ log('Car poll failed: '+e.message); }
+    }catch(e){ 
+      let errorMsg = e.message;
+      if (errorMsg.includes('Failed to fetch')) {
+          errorMsg += ' (Please check internet connection, CORS policy, or disable ad-blockers)';
+      }
+      log('Car poll failed: ' + errorMsg);
+    }
   }
 
   function showAlert(){
