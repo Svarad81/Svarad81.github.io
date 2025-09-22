@@ -1,1 +1,107 @@
+{
+    "format": "graph-model",
+    "generatedBy": "1.15.0",
+    "convertedBy": "TensorFlow.js Converter v1.5.2",
+    "userDefinedMetadata": {
+        "signature": {
+            "inputs": {
+                "input_1:0": {
+                    "name": "input_1:0",
+                    "dtype": "DT_FLOAT",
+                    "tensorShape": {
+                        "dim": [
+                            {
+                                "size": "1"
+                            },
+                            {
+                                "size": "192"
+                            },
+                            {
+                                "size": "192"
+                            },
+                            {
+                                "size": "3"
+                            }
+                        ]
+                    }
+                }
+            },
+            "outputs": {
+                "Identity_1:0": {
+                    "name": "Identity_1:0",
+                    "dtype": "DT_FLOAT",
+                    "tensorShape": {
+                        "dim": [
+                            {
+                                "size": "1"
+                            },
+                            {
+                                "size": "266"
+                            }
+                        ]
+                    }
+                },
+                "Identity_2:0": {
+                    "name": "Identity_2:0",
+                    "dtype": "DT_FLOAT",
+                    "tensorShape": {
+                        "dim": [
+                            {
+                                "size": "1"
+                            },
+                            {
+                                "size": "1"
+                            }
+                        ]
+                    }
+                },
+                "Identity:0": {
+                    "name": "Identity:0",
+                    "dtype": "DT_FLOAT",
+                    "tensorShape": {
+                        "dim": [
+                            {
+                                "size": "1"
+                            },
+                            {
+                                "size": "1404"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "modelTopology": {
+        "node": [
+            {
+                "name": "input_1",
+                "op": "Placeholder",
+                "attr": {
+                    "dtype": {
+                        "type": "DT_FLOAT"
+                    },
+                    "shape": {
+                        "shape": {
+                            "dim": [
+                                {
+                                    "size": "1"
+                                },
+                                {
+                                    "size": "192"
+                                },
+                                {
+                                    "size": "192"
+                                },
+                                {
+                                    "size": "3"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}
 
