@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Name - Principal Software Engineer</title>
+    <title>Varad Chakrawar - Website Devloper</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -197,7 +197,29 @@
             transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
             box-shadow: 0 2px 10px var(--shadow-color);
         }
+        
+        /* --- About Section --- */
+        .about-section {
+            padding: 2rem 0;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
+        .about-section h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: var(--accent-main);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .about-section p {
+            font-family: var(--font-body);
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            color: var(--text-muted);
+        }
+        
         /* --- Projects Section --- */
         .projects-section {
             padding: 4rem 0;
@@ -465,11 +487,11 @@
 
     <header class="header">
         <div class="header-content">
-            <h1 class="header-name">Varad Chakrawar</h1>
+            <h1 class="header-name">My Profile</h1>
             <p class="header-intro">Web Developer passionate about crafting modern, responsive, and user-friendly websites.</p>
             <div class="social-links">
                 <a href="https://www.linkedin.com/in/varad-chakrawar-8b377527a" target="_blank" aria-label="LinkedIn Profile" class="linkedin"><i class="fab fa-linkedin-in"></i></a>
-                <a href="https://github.com/Svarad81" target="_blank" aria-label="GitHub Profile" class="github"><i class="fab fa-github"></i></a>
+                <a href="https://github.com/yourprofile" target="_blank" aria-label="GitHub Profile" class="github"><i class="fab fa-github"></i></a>
             </div>
         </div>
         <button id="theme-toggle" aria-label="Toggle dark and light theme">
@@ -478,6 +500,11 @@
     </header>
 
     <main class="main-content">
+        <section class="about-section">
+            <h2 class="section-title">About Me</h2>
+            <p>I am Varad Chakrawar, a passionate student software developer with expertise in building scalable and reliable web applications. My focus is on designing robust backend systems and crafting clean, intuitive user interfaces. I believe in writing clean, well-documented code and am always eager to learn and adopt new technologies to solve complex problems, such as those in the fields of proactive safety systems and decentralized governance platforms.</p>
+        </section>
+
         <section id="projects" class="projects-section">
             <h2 class="section-title">My Projects</h2>
             <div id="projects-container" class="projects-grid">
@@ -490,7 +517,7 @@
     <footer class="footer">
         <p>&copy; <span id="current-year"></span> Varad Chakrawar. All rights reserved.</p>
         <div class="footer-contact">
-            <p><a href="mail to:svaradchakrawar@gmail.com" class="contact-link">svaradchakrawar@gmail.com</a></p>
+            <p><a href="mailto:youremail@example.com" class="contact-link">svaradchakrawar@gmail.com</a></p>
         </div>
     </footer>
 
@@ -508,6 +535,7 @@
             threshold: 0.1
         });
 
+        // --- Project Data ---
         const projects = [
             {
                 title: 'Drowsiness Detection System',
@@ -519,14 +547,19 @@
                 description: 'Developed a secure and transparent blockchain-based voting system ensuring trust, integrity, and tamper-proof election processes.',
                 projectFile: 'blockchain-voting-system.html'
             },
-            
+           
         ];
 
+        // --- Helper Function: Create Project Card DOM Element ---
         const createProjectCard = (project) => {
             const card = document.createElement('div');
             card.classList.add('project-card');
             card.setAttribute('data-tilt', '');
             
+            card.onclick = () => {
+                window.location.href = project.projectFile;
+            };
+
             const title = document.createElement('h3');
             title.classList.add('project-title');
             title.textContent = project.title;
@@ -537,7 +570,7 @@
 
             const linkButton = document.createElement('button');
             linkButton.classList.add('project-link');
-            linkButton.textContent = 'View on GitHub';
+            linkButton.textContent = 'View on GitHub'; // The button will still say 'View on GitHub' but will redirect to your local file
             linkButton.onclick = (event) => {
                 event.stopPropagation();
                 window.location.href = project.projectFile;
@@ -550,11 +583,13 @@
             return card;
         };
 
+        // --- Async Function: Fetch Project Data ---
         const fetchProjects = async () => {
             await new Promise(resolve => setTimeout(resolve, 1500));
             return projects;
         };
 
+        // --- Render Projects to DOM ---
         const renderProjects = (projects) => {
             projects.forEach((project, index) => {
                 const projectCard = createProjectCard(project);
@@ -565,6 +600,7 @@
             initTiltEffect();
         };
 
+        // --- Intersection Observer Callback for Scroll Reveal ---
         function handleIntersect(entries, observer) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -574,6 +610,7 @@
             });
         }
 
+        // --- Card Tilt Effect (Vanilla JS) ---
         const initTiltEffect = () => {
             document.querySelectorAll('[data-tilt]').forEach(card => {
                 const tiltMax = 5;
@@ -600,6 +637,7 @@
             });
         };
 
+        // --- Main Application Initialization ---
         const initializePage = async () => {
             loadingSpinner.style.display = 'block';
             projectsContainer.style.display = 'none';
@@ -618,6 +656,7 @@
             }
         };
 
+        // --- Theme Toggle Logic ---
         themeToggle.addEventListener('click', () => {
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
