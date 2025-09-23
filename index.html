@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Name - Principal Software Engineer</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;700&family=Montserrat:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CSS Custom Properties for Theming (Dark) --- */
+        :root[data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1f1f1f;
+            --text-primary: #ffffff;
+            --text-muted: #cccccc;
+            --accent-main: #ff5722;
+            --accent-hover: #e64a19;
+            --border-color: #444444;
+            --shadow-color: rgba(0, 0, 0, 0.7);
+            --glass-bg: rgba(30, 30, 30, 0.7);
+
+            /* Social Icon Colors */
+            --icon-github: #ffffff;
+            --icon-linkedin: #ffffff;
+        }
+
+        /* --- CSS Custom Properties for Theming (Light) --- */
+        :root[data-theme="light"] {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-muted: #555555;
+            --accent-main: #ff5722;
+            --accent-hover: #e64a19;
+            --border-color: #dddddd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+
+            /* Social Icon Colors */
+            --icon-github: #333333;
+            --icon-linkedin: #333333;
+        }
+
+        /* --- Social Icon Hover Colors --- */
+        .social-links a.github:hover {
+            color: #000000 !important;
+            background-color: #ffffff;
+        }
+
+        .social-links a.linkedin:hover {
+            color: #0077b5 !important;
+        }
+        
+        /* --- Fonts --- */
+        :root {
+            --font-heading: 'Montserrat', sans-serif;
+            --font-body: 'Roboto Mono', monospace;
+            --font-code: 'Share Tech Mono', monospace;
+            --card-hover-duration: 0.2s;
+            --scroll-reveal-delay: 0.1s;
+        }
+
+        /* --- Base Styles & Global Resets --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            transition: background-color 0.5s ease;
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* --- Header Section --- */
+        .header {
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(10px) saturate(180%);
+            -webkit-backdrop-filter: blur(10px) saturate(180%);
+            padding: 3rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            transition: background-color 0.5s ease, backdrop-filter 0.5s ease;
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header-content::before,
+        .header-content::after {
+            content: '';
+            position: absolute;
+            height: 2px;
+            background-color: var(--accent-main);
+            width: 0%;
+            transition: width 0.5s ease-out;
+        }
+
+        .header-content::before {
+            top: 0;
+            left: 0;
+        }
+
+        .header-content::after {
+            bottom: 0;
+            right: 0;
+        }
+
+        .header-content:hover::before,
+        .header-content:hover::after {
+            width: 100%;
+        }
+        
+        .header-name {
+            font-family: var(--font-heading);
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 700;
+            color: var(--accent-main);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 10px rgba(255, 87, 34, 0.5);
+            transition: color 0.5s ease;
+        }
+
+        .header-intro {
+            font-family: var(--font-code);
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
+            margin-bottom: 1.5rem;
+            color: var(--text-muted);
+            transition: color 0.5s ease;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .social-links a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+            font-size: 1.8rem;
+            transition: color 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+            position: relative;
+            border-radius: 50%;
+            text-decoration: none;
+        }
+        .social-links a.github { color: var(--icon-github); }
+        .social-links a.linkedin { color: var(--icon-linkedin); }
+
+        .social-links a:hover {
+            transform: translateY(-5px) scale(1.1);
+        }
+        
+        /* Theme Toggle Button */
+        #theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+
+        /* --- Projects Section --- */
+        .projects-section {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            font-family: var(--font-heading);
+            font-size: clamp(2rem, 5vw, 3rem);
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--accent-main);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            position: relative;
+            transition: color 0.5s ease;
+        }
+        
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            background: var(--accent-main);
+            margin: 1rem auto 0;
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(255, 87, 34, 0.6);
+            transition: background 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            padding: 0 1rem;
+        }
+
+        /* Project Card Base */
+        .project-card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            
+            /* Scroll reveal initial state */
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        
+        /* Scroll reveal active state */
+        .project-card.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .project-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 30px var(--shadow-color), 0 0 20px rgba(255, 87, 34, 0.4);
+        }
+        
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, transparent, var(--accent-main), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease-out;
+        }
+
+        .project-card:hover::before {
+            transform: translateX(0%);
+        }
+
+        .project-title {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            color: var(--accent-main);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+            transition: color 0.5s ease;
+        }
+
+        .project-description {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+            color: var(--text-muted);
+            transition: color 0.5s ease;
+        }
+
+        .project-link {
+            display: inline-block;
+            background-color: var(--accent-main);
+            color: var(--bg-primary);
+            padding: 0.9rem 2rem;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            align-self: flex-start;
+            font-family: var(--font-heading);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.3);
+            border: none;
+            cursor: pointer;
+        }
+
+        .project-link:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.5);
+        }
+
+        /* --- Loading & Error States --- */
+        .loading-spinner {
+            display: none;
+            width: 60px;
+            height: 60px;
+            border: 6px solid var(--border-color);
+            border-top: 6px solid var(--accent-main);
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            margin: 4rem auto;
+            position: relative;
+        }
+
+        .loading-spinner::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 6px solid var(--accent-main);
+            border-radius: 50%;
+            animation: spinReverse 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+        }
+
+        .error-message {
+            display: none;
+            text-align: center;
+            color: var(--accent-main);
+            font-size: 1.1rem;
+            padding: 1.5rem;
+            border: 1px dashed var(--accent-main);
+            background-color: rgba(255, 87, 34, 0.1);
+            margin: 4rem auto;
+            border-radius: 8px;
+            max-width: 500px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes spinReverse {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+
+        /* --- Footer Section --- */
+        .footer {
+            background-color: var(--bg-secondary);
+            text-align: center;
+            padding: 2.5rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-top: 3rem;
+            transition: background-color 0.5s ease, border-color 0.5s ease;
+        }
+
+        .footer-contact {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .contact-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.3s ease, transform 0.2s ease;
+            font-family: var(--font-code);
+        }
+
+        .contact-link:hover {
+            color: var(--accent-main);
+            transform: translateY(-2px);
+            text-shadow: 0 0 8px rgba(255, 87, 34, 0.4);
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+            .header-name {
+                font-size: clamp(2rem, 8vw, 3.5rem);
+            }
+            .header-intro {
+                font-size: 1rem;
+            }
+            .social-links a {
+                font-size: 1.5rem;
+            }
+            .section-title {
+                font-size: clamp(1.5rem, 6vw, 2.5rem);
+            }
+            .projects-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .project-card {
+                padding: 1.5rem;
+            }
+            .project-title {
+                font-size: 1.3rem;
+            }
+            .project-description {
+                font-size: 0.9rem;
+            }
+            .project-link {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.9rem;
+            }
+            .footer {
+                padding: 1.5rem 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-name {
+                letter-spacing: 0.05em;
+            }
+            .social-links {
+                gap: 1rem;
+            }
+            .social-links a {
+                font-size: 1.3rem;
+            }
+            .main-content {
+                padding: 1.5rem 0.75rem;
+            }
+            .project-card {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-name">Varad Chakrawar</h1>
+            <p class="header-intro">Web Developer passionate about crafting modern, responsive, and user-friendly websites.</p>
+            <div class="social-links">
+                <a href="https://www.linkedin.com/in/varad-chakrawar-8b377527a" target="_blank" aria-label="LinkedIn Profile" class="linkedin"><i class="fab fa-linkedin-in"></i></a>
+                <a href="https://github.com/Svarad81" target="_blank" aria-label="GitHub Profile" class="github"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+        <button id="theme-toggle" aria-label="Toggle dark and light theme">
+            <i class="fas fa-sun"></i>
+        </button>
+    </header>
+
+    <main class="main-content">
+        <section id="projects" class="projects-section">
+            <h2 class="section-title">My Projects</h2>
+            <div id="projects-container" class="projects-grid">
+                </div>
+            <div id="loading-spinner" class="loading-spinner"></div>
+            <p id="error-message" class="error-message"></p>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; <span id="current-year"></span> Varad Chakrawar. All rights reserved.</p>
+        <div class="footer-contact">
+            <p><a href="mail to:svaradchakrawar@gmail.com" class="contact-link">svaradchakrawar@gmail.com</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // --- Core Application Logic ---
+        const projectsContainer = document.getElementById('projects-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        const projectCardsObserver = new IntersectionObserver(handleIntersect, {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        });
+
+        const projects = [
+            {
+                title: 'Drowsiness Detection System',
+                description: 'Developed a real-time drowsiness detection system using computer vision and machine learning to enhance driver safety.',
+                projectFile: 'drowsiness-detection-system.html'
+            },
+            {
+                title: 'Blockchain Voting System',
+                description: 'Developed a secure and transparent blockchain-based voting system ensuring trust, integrity, and tamper-proof election processes.',
+                projectFile: 'blockchain-voting-system.html'
+            },
+            
+        ];
+
+        const createProjectCard = (project) => {
+            const card = document.createElement('div');
+            card.classList.add('project-card');
+            card.setAttribute('data-tilt', '');
+            
+            const title = document.createElement('h3');
+            title.classList.add('project-title');
+            title.textContent = project.title;
+
+            const description = document.createElement('p');
+            description.classList.add('project-description');
+            description.textContent = project.description;
+
+            const linkButton = document.createElement('button');
+            linkButton.classList.add('project-link');
+            linkButton.textContent = 'View on GitHub';
+            linkButton.onclick = (event) => {
+                event.stopPropagation();
+                window.location.href = project.projectFile;
+            };
+            
+            card.appendChild(title);
+            card.appendChild(description);
+            card.appendChild(linkButton);
+
+            return card;
+        };
+
+        const fetchProjects = async () => {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return projects;
+        };
+
+        const renderProjects = (projects) => {
+            projects.forEach((project, index) => {
+                const projectCard = createProjectCard(project);
+                projectCard.style.transitionDelay = `${index * 0.1}s`;
+                projectsContainer.appendChild(projectCard);
+                projectCardsObserver.observe(projectCard);
+            });
+            initTiltEffect();
+        };
+
+        function handleIntersect(entries, observer) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }
+
+        const initTiltEffect = () => {
+            document.querySelectorAll('[data-tilt]').forEach(card => {
+                const tiltMax = 5;
+                const tiltPerspective = 1000;
+                card.style.transition = `transform 0.4s ease-out`;
+
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+
+                    const rotateX = ((y - centerY) / centerY) * tiltMax;
+                    const rotateY = ((x - centerX) / centerX) * -tiltMax;
+
+                    card.style.transform = `perspective(${tiltPerspective}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+                });
+            });
+        };
+
+        const initializePage = async () => {
+            loadingSpinner.style.display = 'block';
+            projectsContainer.style.display = 'none';
+            errorMessage.style.display = 'none';
+
+            try {
+                const projects = await fetchProjects();
+                renderProjects(projects);
+            } catch (error) {
+                console.error('Failed to initialize projects:', error);
+                errorMessage.textContent = `Error loading projects. Please check your connection or GitHub API status.`;
+                errorMessage.style.display = 'block';
+            } finally {
+                loadingSpinner.style.display = 'none';
+                projectsContainer.style.display = 'grid'; 
+            }
+        };
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+
+            const icon = themeToggle.querySelector('i');
+            if (newTheme === 'dark') {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePage();
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+        });
+    </script>
+
+</body>
+</html>
