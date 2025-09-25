@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Management - User Mode (View Only)</title>
+    <style>
+        /* CSS Styling */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; }
+        header { background-color: #007bff; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 1.5em; }
+        .mode-switch { background-color: #28a745; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; }
+        .mode-switch:hover { background-color: #218838; }
+        .search-container { padding: 15px 20px; display: flex; gap: 10px; background-color: white; border-bottom: 1px solid #ddd; }
+        #search-input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #search-button, #my-location-button { background-color: #6c757d; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; }
+        #map { height: 85vh; width: 100%; }
+        /* Custom InfoWindow for Signal Timer */
+        .signal-info-content { font-weight: bold; padding: 5px; font-size: 1.1em; }
+        .signal-info-content .status-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.95em; }
+        .red-light { color: #dc3545; }
+        .green-light { color: #28a745; }
+        .yellow-light { color: #ffc107; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚦 User Mode: Real-Time Traffic View</h1>
+        <button class="mode-switch" onclick="switchMode('user')">Switch to Enterprise Mode</button>
+    </header>
+
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search a location or intersection...">
+        <button id="search-button" onclick="handleSearch()">Search</button>
+        <button id="my-location-button" onclick="findMyLocation()">My Location 📍</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        const API_KEY = 'AIzaSyD6kaZpN3w7eqo3V_EV0Ut_7la75UYhBts'; 
+        const LOCAL_STORAGE_KEY = 'trafficSignalsData';
+        let map;
+        let trafficLayer;
+        let infoWindow;
+        const INITIAL_COORDS = { lat: 18.5204, lng: 73.8567 };
+
+        // --- Core Data Variables ---
+        const directionLabels = ['N', 'E', 'W', 'S'];
+        let mockSignals = []; 
+        
+        // --- 30 ACCURATE INTERSECTION COORDINATES ---
+        const mockIntersectionLocations = [
+            { name: "Swami Vivekanad chowk , pradhikaran Rd", lat: 18.656294, lng: 73.765169 }, { name: "Chatrapati Shivaji Maharaj Chowk , Pradhikaran Rd", lat: 18.661110, lng: 73.764088 },
+            { name: "Karve Putala", lat: 18.502102, lng: 73.815419 }, { name: "Chatrapati Rajaram Maharaj Path", lat: 18.502806, lng: 73.818342 },
+            { name: "Late GA Kulkarni Path , Kothrud", lat: 18.503782, lng: 73.821331 }, { name: "Paud Phata , Kelewadi", lat: 18.505988, lng: 73.825558 },
+            { name: "NDA Rd , Giridhar Nagar", lat: 18.480313, lng: 73.804069 }, { name: "Service Rd , Warje", lat: 18.480169, lng: 73.804674 },
+            { name: "Deccan Gymkhana", lat: 18.514579, lng: 73.842385 }, { name: "Katraj Chowk", lat: 18.448141, lng: 73.858529 },
+            { name: "Kaspate Chowk", lat: 18.6110, lng: 73.8050 }, { name: "Chikhali Akurdi x spine Rd 1", lat: 18.667263, lng: 73.96231 },
+            { name: "Chikhali Akurdi x Spine Rd 2", lat: 18.667645, lng: 73.796593 }, { name: "Chaatrapati Shivaji Maharaj Chowk , Ravet", lat: 18.643146, lng: 73.750645 },
+            { name: "Dr. Babasaheb Ambedkar Chowk", lat: 18.643750, lng: 73.755253 }, { name: "Nigdi Rd", lat: 18.668132, lng: 73.785636 },
+            { name: "Chinchwad Akurdi Link Rd", lat: 18.664204, lng: 73.786534 }, { name: "Warje Flyover Base", lat: 18.4900, lng: 73.8035 },
+            { name: "NIBM Road Junction", lat: 18.664204, lng: 73.8900 }, { name: "Magarpatta City Gate", lat: 18.5340, lng: 73.9390 },
+            { name: "Pimpri Chowk", lat: 18.6250, lng: 73.8400 }, { name: "Tingre Nagar Corner", lat: 18.5775, lng: 73.8785 },
+            { name: "Yerwada Jail Road", lat: 18.5590, lng: 73.8820 }, { name: "FC Road Intersection", lat: 18.5240, lng: 73.8400 },
+            { name: "Sus Gaon Phata", lat: 18.5700, lng: 73.7540 }, { name: "Talawade IT Park", lat: 18.6940, lng: 73.7850 },
+            { name: "Chakan MIDC Gate 1", lat: 18.7500, lng: 73.8650 }, { name: "Ambegaon Pathar", lat: 18.4580, lng: 73.8340 },
+            { name: "Saswad Road Crossing", lat: 18.4050, lng: 73.9600 }, { name: "Lonavala Exit Point", lat: 18.7500, lng: 73.4000 }
+        ];
+
+        // Utility function
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // --- Data Generation and Persistence Logic ---
+        function generateRandomSignalData() {
+            // Generates a random, but valid, starting state for a 4-way signal
+            const isNSAxisGreen = Math.random() < 0.5;
+            const greenDuration = getRandomInt(15, 30);
+            const redDuration = getRandomInt(25, 40);
+            const yellowDuration = 5;
+            const priorityAxis = isNSAxisGreen ? ['N', 'S'] : ['E', 'W'];
+            const crossingAxis = isNSAxisGreen ? ['E', 'W'] : ['N', 'S'];
+
+            const state = {};
+            const density = {};
+
+            priorityAxis.forEach(dir => {
+                const color = Math.random() < 0.8 ? 'green' : 'yellow';
+                state[dir] = { color: color, timer: color === 'green' ? greenDuration : yellowDuration };
+            });
+            crossingAxis.forEach(dir => {
+                state[dir] = { color: 'red', timer: redDuration };
+            });
+
+            priorityAxis.forEach(dir => { density[dir] = getRandomInt(40, 90); });
+            crossingAxis.forEach(dir => { density[dir] = getRandomInt(100, 250); });
+
+            return { state, density };
+        }
+
+        // Initialize or Load Data from Local Storage
+        function loadDataFromStorage() {
+            const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            
+            if (storedData) {
+                const parsedData = JSON.parse(storedData);
+                mockSignals = mockIntersectionLocations.map((location, index) => {
+                    const storedSignal = parsedData[index] || {};
+                    return {
+                        id: `I${index + 1}`,
+                        name: location.name,
+                        lat: location.lat,
+                        lng: location.lng,
+                        marker: null,
+                        state: storedSignal.state || generateRandomSignalData().state,
+                        density: storedSignal.density || generateRandomSignalData().density
+                    };
+                });
+            } else {
+                // If no data, generate a NEW random set (first load)
+                mockSignals = mockIntersectionLocations.map((location, index) => {
+                    const randomData = generateRandomSignalData();
+                    return {
+                        id: `I${index + 1}`,
+                        name: location.name,
+                        lat: location.lat,
+                        lng: location.lng,
+                        marker: null,
+                        state: randomData.state,
+                        density: randomData.density
+                    };
+                });
+                saveDataToStorage(); // Initial save
+            }
+        }
+
+        // Save current data state to Local Storage
+        function saveDataToStorage() {
+            const serializableSignals = mockSignals.map(s => {
+                const { marker, ...rest } = s;
+                return rest;
+            });
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serializableSignals));
+        }
+
+        // =================================================================
+        // 1. Map Initialization
+        // =================================================================
+        function initMap() {
+            loadDataFromStorage(); // Load or generate data
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: INITIAL_COORDS,
+                zoom: 13,
+                mapTypeControl: false,
+            });
+
+            // Enable Traffic Layer
+            trafficLayer = new google.maps.TrafficLayer();
+            trafficLayer.setMap(map);
+            infoWindow = new google.maps.InfoWindow();
+
+            addSignalOverlays();
+            // Start the synchronization and rotation timer
+            setInterval(updateSignalTimers, 1000);
+        }
+
+        // =================================================================
+        // Signal Overlay and Timer Logic
+        // =================================================================
+        function addSignalOverlays() {
+            mockSignals.forEach(signal => {
+                const marker = new google.maps.Marker({
+                    position: { lat: signal.lat, lng: signal.lng },
+                    map: map,
+                    title: signal.name,
+                    icon: {
+                        url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="14" fill="%23FFFFFF" stroke="%23000000" stroke-width="2"/><text x="15" y="20" font-family="Arial" font-size="16" fill="%23000000" text-anchor="middle">🚦</text></svg>',
+                        scaledSize: new google.maps.Size(30, 30),
+                        anchor: new google.maps.Point(15, 30)
+                    }
+                });
+                signal.marker = marker;
+                marker.addListener('click', () => {
+                    infoWindow.setContent(getSignalInfoContent(signal));
+                    infoWindow.open(map, marker);
+                });
+            });
+        }
+        
+        function getSignalInfoContent(signal) {
+            let content = `<div class="signal-info-content"><b>${signal.name} Status</b><hr style="margin: 5px 0;">`;
+            const isManuallyControlled = localStorage.getItem(`isManual-${signal.id}`) === 'true';
+            if (isManuallyControlled) {
+                content += `<p style="color:red; margin: 0 0 5px;">MANUAL OVERRIDE ACTIVE</p>`;
+            }
+            directionLabels.forEach(dir => {
+                const status = signal.state[dir];
+                let colorClass = status.color + '-light';
+                content += `
+                    <div class="status-row">
+                        <span style="width: 25%;"><b>${dir}</b>:</span> 
+                        <span class="${colorClass}" style="width: 40%; text-align: left; text-transform: uppercase;">${status.color}</span>
+                        <span class="${colorClass}" id="timer-${signal.id}-${dir}" style="width: 35%; text-align: right;">${status.timer}s</span>
+                    </div>
+                `;
+            });
+            content += `</div>`;
+            return content;
+        }
+
+        function updateSignalTimers() {
+            let stateChanged = false;
+
+            // Load data first to capture any MANUAL changes from Enterprise Mode
+            loadDataFromStorage(); 
+
+            mockSignals.forEach(signal => {
+                let isInfoWindowOpen = false;
+                const isManuallyControlled = localStorage.getItem(`isManual-${signal.id}`) === 'true';
+
+                directionLabels.forEach(dir => {
+                    let status = signal.state[dir];
+                    
+                    if (status.timer > 0) {
+                        status.timer--;
+                        stateChanged = true;
+                    }
+
+                    // Only rotate traffic lights if not under manual control
+                    if (!isManuallyControlled && status.timer === 0) {
+                        const isNS = (dir === 'N' || dir === 'S');
+                        const axisDirs = isNS ? ['N', 'S'] : ['E', 'W'];
+                        const crossingDirs = isNS ? ['E', 'W'] : ['N', 'S'];
+
+                        if (status.color === 'green') {
+                            axisDirs.forEach(d => { signal.state[d].color = 'yellow'; signal.state[d].timer = 5; });
+                            stateChanged = true;
+                        } else if (status.color === 'yellow') {
+                            axisDirs.forEach(d => { signal.state[d].color = 'red'; signal.state[d].timer = 30; });
+                            crossingDirs.forEach(d => { signal.state[d].color = 'green'; signal.state[d].timer = 20; });
+                            stateChanged = true;
+                        }
+                    }
+
+                    const timerEl = document.getElementById(`timer-${signal.id}-${dir}`);
+                    if (timerEl) {
+                        isInfoWindowOpen = true;
+                        const colorClass = status.color + '-light';
+                        timerEl.textContent = `${status.timer}s`;
+                        timerEl.className = colorClass;
+                    }
+                });
+
+                if (isInfoWindowOpen && infoWindow.getContent().includes(`timer-${signal.id}`)) {
+                    infoWindow.setContent(getSignalInfoContent(signal));
+                    infoWindow.open(map, signal.marker);
+                }
+            });
+
+            // Save state back to Local Storage (pushes updates for Enterprise Mode to read)
+            if (stateChanged) {
+                saveDataToStorage();
+            }
+        }
+
+        // =================================================================
+        // Search and Geolocation & Navigation (Shared)
+        // =================================================================
+        function findMyLocation() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                        map.setCenter(pos);
+                        map.setZoom(15);
+                        new google.maps.Marker({ position: pos, map: map, title: "You are here!" });
+                    },
+                    (error) => { console.error("Geolocation Error:", error.message); alert("Could not retrieve your location. Error: " + error.message); }
+                );
+            } else { alert("Geolocation is not supported by your browser."); }
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ 'address': query }, (results, status) => {
+                if (status === 'OK') {
+                    map.setCenter(results[0].geometry.location);
+                    map.setZoom(15);
+                    new google.maps.Marker({ map: map, position: results[0].geometry.location });
+                } else { alert('Geocode was not successful for the following reason: ' + status); }
+            });
+        }
+
+        function switchMode(currentPage) {
+            if (currentPage === 'user') {
+                window.location.href = 'enterprise.html';
+            } else if (currentPage === 'enterprise') {
+                window.location.href = 'user.html';
+            }
+        }
+        
+        function loadGoogleMapsScript() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
+            script.async = true;
+            document.head.appendChild(script);
+        }
+        document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
+    </script>
+</body>
+</html>
