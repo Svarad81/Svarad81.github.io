@@ -137,11 +137,10 @@
         const JSONBIN_MASTER_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; 
         const JSONBIN_BIN_ID = '68d66715ae596e708ffc77c0'; 
         
-        // FIX 1: Restore correct GET endpoint for reading data
+        // Final Fix: Use two distinct endpoints for reading and writing to ensure success
         const JSONBIN_GET_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`;
-        // FIX 2: Use a PUT endpoint that can accept the Master Key or Secret Key for writing
         const JSONBIN_PUT_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`; 
-        
+
         // CRITICAL: Ensure you use the correct Master Key or Secret Key for the PUT operation
         const JSONBIN_WRITE_KEY = JSONBIN_MASTER_KEY; 
         
@@ -348,7 +347,6 @@
             const tableBody = document.getElementById('issue-table-body');
             tableBody.innerHTML = '<tr><td colspan="3">Fetching data...</td></tr>';
 
-            // Use the Master Key for GET (reading)
             fetch(JSONBIN_GET_URL, {
                 method: 'GET',
                 headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
@@ -655,7 +653,7 @@
 
             if (signal.state[priorityAxis[0]].color === 'red') {
                 priorityAxis.forEach(dir => { signal.state[dir].color = 'green'; signal.state[dir].timer = 25; });
-                crossingAxis.forEach(dir => { signal.state[dir].color = 'red'; signal.state[dir].timer = 35; });
+                crossingAxis.forEach(d => { signal.state[d].color = 'red'; signal.state[d].timer = 35; });
 
                 saveDataToStorage();
                  if (statusEl) { statusEl.textContent = `Auto-Prediction: SWITCHED to ${priorityAxis.join('/')} (Density: ${maxDensity}).`; statusEl.style.color = 'red'; }
