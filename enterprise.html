@@ -7,36 +7,59 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* CSS Styling */
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; height: 100vh; }
         header { background-color: #007bff; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { margin: 0; font-size: 1.5em; }
         .mode-switch { background-color: #28a745; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; }
         .mode-switch:hover { background-color: #218838; }
+        .main-content { display: flex; flex-grow: 1; overflow: hidden; }
+        .map-section { flex-grow: 1; display: flex; flex-direction: column; }
         .search-container { padding: 15px 20px; display: flex; gap: 10px; background-color: white; border-bottom: 1px solid #ddd; }
         #search-input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        #map-container { border-bottom: 2px solid #ddd; }
-        #map { height: 50vh; width: 100%; }
+        #map-container { flex-grow: 1; position: relative; }
+        #map { height: 100%; width: 100%; }
+        
         /* Custom InfoWindow for Signal Timer */
         .signal-info-content { font-weight: bold; padding: 5px; font-size: 1.1em; }
         .signal-info-content .status-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.95em; }
         .red-light { color: #dc3545; }
         .green-light { color: #28a745; }
         .yellow-light { color: #ffc107; }
-        /* Dashboard Styling */
-        #control-dashboard { padding: 20px; background-color: #fff; margin-top: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); display: none; }
-        #control-dashboard h2 { color: #007bff; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 15px; }
-        .chart-area { border: 1px solid #ccc; padding: 15px; border-radius: 4px; }
-        .control-panel { padding: 15px; background-color: #f8f9fa; border-radius: 4px; }
-        .mode-status { font-size: 1.2em; font-weight: bold; padding: 8px; border-radius: 4px; margin-bottom: 10px; }
+        
+        /* Dashboard Styling - ADJUSTED HEIGHT */
+        #control-dashboard { 
+            padding: 10px 20px; 
+            background-color: #fff; 
+            border-top: 1px solid #eee; 
+            margin-top: 0; 
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1); 
+            display: none; 
+            max-height: 200px; 
+            overflow-y: auto;
+        }
+        #control-dashboard h2 { color: #007bff; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 1.3em; } 
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; 
+             gap: 10px; margin-top: 5px; } 
+        .chart-area { border: 1px solid #ccc; padding: 10px; border-radius: 4px; } 
+        .chart-area h3 { font-size: 1em; margin: 0 0 5px 0; }
+        .control-panel { padding: 10px; background-color: #f8f9fa; border-radius: 4px; } 
+        .control-panel h3 { font-size: 1.1em; margin: 0 0 5px 0; }
+        .control-panel h4 { font-size: 0.9em; margin: 5px 0 3px 0; }
+        .mode-status { font-size: 1em; padding: 5px; margin-bottom: 5px; } 
         .auto-mode { background-color: #ffc107; color: #333; }
         .manual-mode { background-color: #dc3545; color: white; }
-        .manual-controls button { width: 45%; margin: 5px 2%; padding: 10px 0; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.3s; }
-        .manual-controls button:nth-child(1) { background-color: #dc3545; } /* North */
-        .manual-controls button:nth-child(2) { background-color: #ffc107; } /* East */
-        .manual-controls button:nth-child(3) { background-color: #17a2b8; } /* West */
-        .manual-controls button:nth-child(4) { background-color: #007bff; } /* South */
-        #reset-btn { background-color: #6c757d; width: 94%; margin: 10px 3%; }
+        .manual-controls button { width: 45%; margin: 3px 2%; padding: 5px 0; font-size: 0.85em; } 
+        #reset-btn { width: 94%; margin: 5px 3%; padding: 5px 0; }
+        
+        /* NEW: Issue Management Sidebar */
+        #issue-sidebar { width: 350px; background-color: #f0f0f0; padding: 15px; overflow-y: auto; border-left: 1px solid #ccc; }
+        #issue-sidebar h2 { color: #007bff; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        #issue-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        #issue-table th, #issue-table td { border: 1px solid #ddd; padding: 5px; text-align: left; }
+        #issue-table th { background-color: #e9ecef; }
+        .resolve-btn { background-color: #28a745; color: white; border: none; padding: 3px 6px; cursor: pointer; border-radius: 3px; }
+        .location-btn { background-color: #17a2b8; color: white; border: none; padding: 3px 6px; cursor: pointer; border-radius: 3px; margin-left: 2px; }
+        .issue-row[data-status="not solved"] { background-color: #fff3cd; }
     </style>
 </head>
 <body>
@@ -46,80 +69,193 @@
         <button class="mode-switch" onclick="switchMode('enterprise')">Switch to User Mode</button>
     </header>
 
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="Search a location or intersection...">
-        <button id="search-button" onclick="handleSearch()">Search</button>
-        <button id="my-location-button" onclick="findMyLocation()">My Location 📍</button>
-    </div>
-
-    <div id="map-container">
-        <div id="map"></div>
-    </div>
-
-    <div id="control-dashboard">
-        <h2 id="dashboard-title">Select a Signal on the Map to View its Control Panel</h2>
-        
-        <div class="dashboard-grid">
-            <div class="chart-area">
-                <h3>Traffic Density (Vehicles / 5 min)</h3>
-                <canvas id="density-chart"></canvas>
+    <div class="main-content">
+        <div class="map-section">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search a location or intersection...">
+                <button id="search-button" onclick="handleSearch()">Search</button>
+                <button id="my-location-button" onclick="findMyLocation()">My Location 📍</button>
             </div>
 
-            <div class="control-panel">
-                <h3>Signal Control</h3>
-                <div id="mode-indicator" class="mode-status auto-mode">Automatic Mode</div>
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+
+            <div id="control-dashboard">
+                <h2 id="dashboard-title">Select a Signal on the Map to View its Control Panel</h2>
                 
-                <h4>Automatic Predictor Status:</h4>
-                <p id="predictor-status">Awaiting data...</p>
+                <div class="dashboard-grid">
+                    <div class="chart-area">
+                        <h3>Traffic Density (Vehicles / 5 min)</h3>
+                        <canvas id="density-chart"></canvas>
+                    </div>
 
-                <hr>
+                    <div class="control-panel">
+                        <h3>Signal Control</h3>
+                        <div id="mode-indicator" class="mode-status auto-mode">Automatic Mode</div>
+                        
+                        <h4>Automatic Predictor Status:</h4>
+                        <p id="predictor-status" style="font-size: 0.85em;">Awaiting data...</p>
 
-                <h4>Manual Control Override: Set Green Light</h4>
-                <div class="manual-controls">
-                    <button onclick="setManualSignal('N')">NORTH</button>
-                    <button onclick="setManualSignal('E')">EAST</button>
-                    <button onclick="setManualSignal('W')">WEST</button>
-                    <button onclick="setManualSignal('S')">SOUTH</button>
+                        <hr>
+
+                        <h4>Manual Control Override: Set Green Light</h4>
+                        <div class="manual-controls">
+                            <button onclick="setManualSignal('N')">NORTH</button>
+                            <button onclick="setManualSignal('E')">EAST</button>
+                            <button onclick="setManualSignal('W')">WEST</button>
+                            <button onclick="setManualSignal('S')">SOUTH</button>
+                        </div>
+                        <button id="reset-btn" onclick="resetAutomatic()">Reset to Automatic</button>
+                    </div>
                 </div>
-                <button id="reset-btn" onclick="resetAutomatic()">Reset to Automatic</button>
             </div>
+        </div>
+
+        <div id="issue-sidebar">
+            <h2>Reported Issues (Near Me - 5km)</h2>
+            <div id="my-location-status">Click 'My Location 📍' to center map & filter issues.</div>
+            <p style="font-size: 0.8em;">Data refreshes every 30 seconds.</p>
+            <table id="issue-table">
+                <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="issue-table-body">
+                    <tr><td colspan="3">Loading issues...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
     <script>
+        // --- API Keys and Configuration ---
         const API_KEY = 'AIzaSyD6kaZpN3w7eqo3V_EV0Ut_7la75UYhBts'; 
+        const JSONBIN_MASTER_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; 
+        const JSONBIN_BIN_ID = '68d66715ae596e708ffc77c0'; 
+        
+        // FIX 1: Restore correct GET endpoint for reading data
+        const JSONBIN_GET_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`;
+        // FIX 2: Use a PUT endpoint that can accept the Master Key or Secret Key for writing
+        const JSONBIN_PUT_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`; 
+        
+        // CRITICAL: Ensure you use the correct Master Key or Secret Key for the PUT operation
+        const JSONBIN_WRITE_KEY = JSONBIN_MASTER_KEY; 
+        
         const LOCAL_STORAGE_KEY = 'trafficSignalsData';
+
         let map;
         let trafficLayer;
         let infoWindow;
         let densityChart;
         let currentSignalId = null; 
+        let currentAdminPosition = null;
+        let issueMarkers = [];
+        const NEARBY_KM = 5; 
+        const INITIAL_COORDS = { lat: 18.5204, lng: 73.8567 };
 
         // State tracking
         let isManualMode = {}; 
         const directionLabels = ['N', 'E', 'W', 'S'];
         const directionMap = { 'N': 'North', 'E': 'East', 'W': 'West', 'S': 'South' };
 
-        // --- Core Data Definitions (Will be populated from Local Storage) ---
+        // --- Core Data Definitions (Existing) ---
         let mockSignals = []; 
-        
-        // --- Core Local Storage Functions ---
+        const mockIntersectionLocations = [
+            { name: "Swami Vivekanad chowk , pradhikaran Rd", lat: 18.656294, lng: 73.765169 }, { name: "Chatrapati Shivaji Maharaj Chowk , Pradhikaran Rd", lat: 18.661110, lng: 73.764088 },
+            { name: "Karve Putala", lat: 18.502102, lng: 73.815419 }, { name: "Chatrapati Rajaram Maharaj Path", lat: 18.502806, lng: 73.818342 },
+            { name: "Late GA Kulkarni Path , Kothrud", lat: 18.503782, lng: 73.821331 }, { name: "Paud Phata , Kelewadi", lat: 18.505988, lng: 73.825558 },
+            { name: "NDA Rd , Giridhar Nagar", lat: 18.480313, lng: 73.804069 }, { name: "Service Rd , Warje", lat: 18.480169, lng: 73.804674 },
+            { name: "Deccan Gymkhana", lat: 18.514579, lng: 73.842385 }, { name: "Katraj Chowk", lat: 18.448141, lng: 73.858529 },
+            { name: "Kaspate Chowk", lat: 18.6110, lng: 73.8050 }, { name: "Chikhali Akurdi x spine Rd 1", lat: 18.667263, lng: 73.96231 },
+            { name: "Chikhali Akurdi x Spine Rd 2", lat: 18.667645, lng: 73.796593 }, { name: "Chaatrapati Shivaji Maharaj Chowk , Ravet", lat: 18.643146, lng: 73.750645 },
+            { name: "Dr. Babasaheb Ambedkar Chowk", lat: 18.643750, lng: 73.755253 }, { name: "Nigdi Rd", lat: 18.668132, lng: 73.785636 },
+            { name: "Chinchwad Akurdi Link Rd", lat: 18.664204, lng: 73.786534 }, { name: "Warje Flyover Base", lat: 18.4900, lng: 73.8035 },
+            { name: "NIBM Road Junction", lat: 18.664204, lng: 73.8900 }, { name: "Magarpatta City Gate", lat: 18.5340, lng: 73.9390 },
+            { name: "Pimpri Chowk", lat: 18.6250, lng: 73.8400 }, { name: "Tingre Nagar Corner", lat: 18.5775, lng: 73.8785 },
+            { name: "Yerwada Jail Road", lat: 18.5590, lng: 73.8820 }, { name: "FC Road Intersection", lat: 18.5240, lng: 73.8400 },
+            { name: "Sus Gaon Phata", lat: 18.5700, lng: 73.7540 }, { name: "Talawade IT Park", lat: 18.6940, lng: 73.7850 },
+            { name: "Chakan MIDC Gate 1", lat: 18.7500, lng: 73.8650 }, { name: "Ambegaon Pathar", lat: 18.4580, lng: 73.8340 },
+            { name: "Saswad Road Crossing", lat: 18.4050, lng: 73.9600 }, { name: "Lonavala Exit Point", lat: 18.7500, lng: 73.4000 }
+        ];
 
-        // Load data from Local Storage 
-        function loadDataFromStorage() {
-            const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (storedData) {
-                mockSignals = JSON.parse(storedData).map(s => ({ ...s, marker: null }));
-                
-                mockSignals.forEach(signal => {
-                    isManualMode[signal.id] = localStorage.getItem(`isManual-${signal.id}`) === 'true';
-                });
-                return true;
+        // --- Utility and Data Functions ---
+        function getIssueIcon(query) {
+            switch (query) {
+                case 'potholes': return '🚧';
+                case 'construction': return '🚜';
+                case 'lane closure': return '⚠️';
+                case 'accident': return '💥';
+                case 'road blockage': return '🛑';
+                default: return '📍';
             }
-            return false;
+        }
+        
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
-        // Save only the dynamic parts back to Local Storage (Control changes only)
+        function generateRandomSignalData() {
+            const isNSAxisGreen = Math.random() < 0.5;
+            const greenDuration = getRandomInt(15, 30);
+            const redDuration = getRandomInt(25, 40);
+            const yellowDuration = 5;
+            const priorityAxis = isNSAxisGreen ? ['N', 'S'] : ['E', 'W'];
+            const crossingAxis = isNSAxisGreen ? ['E', 'W'] : ['N', 'S'];
+            const state = {};
+            const density = {};
+            priorityAxis.forEach(dir => {
+                const color = Math.random() < 0.8 ? 'green' : 'yellow';
+                state[dir] = { color: color, timer: color === 'green' ? greenDuration : yellowDuration };
+            });
+            crossingAxis.forEach(dir => {
+                state[dir] = { color: 'red', timer: redDuration };
+            });
+            priorityAxis.forEach(dir => { density[dir] = getRandomInt(40, 90); });
+            crossingAxis.forEach(dir => { density[dir] = getRandomInt(100, 250); });
+            return { state, density };
+        }
+        
+        function loadDataFromStorage() {
+            const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            
+            if (storedData) {
+                try {
+                    const parsedData = JSON.parse(storedData);
+                    mockSignals = mockIntersectionLocations.map((location, index) => {
+                        const storedSignal = parsedData[index] || {};
+                        return {
+                            id: `I${index + 1}`,
+                            name: location.name,
+                            lat: location.lat,
+                            lng: location.lng,
+                            marker: null,
+                            state: storedSignal.state && Object.keys(storedSignal.state).length === 4 ? storedSignal.state : generateRandomSignalData().state,
+                            density: storedSignal.density && Object.keys(storedSignal.density).length === 4 ? storedSignal.density : generateRandomSignalData().density
+                        };
+                    });
+                } catch (e) {
+                    console.error("Local Storage data corrupted. Using fallback initial data.", e);
+                    mockSignals = mockIntersectionLocations.map((location, index) => ({
+                         id: `I${index + 1}`, name: location.name, lat: location.lat, lng: location.lng, marker: null, ...generateRandomSignalData()
+                    }));
+                }
+            } else {
+                 console.warn("No traffic data found. Initializing new set.");
+                 mockSignals = mockIntersectionLocations.map((location, index) => ({
+                     id: `I${index + 1}`, name: location.name, lat: location.lat, lng: location.lng, marker: null, ...generateRandomSignalData()
+                 }));
+                 saveDataToStorage();
+            }
+            
+            mockSignals.forEach(signal => {
+                 isManualMode[signal.id] = localStorage.getItem(`isManual-${signal.id}`) === 'true';
+            });
+        }
+
         function saveDataToStorage() {
             const serializableSignals = mockSignals.map(s => {
                 const { marker, ...rest } = s;
@@ -128,17 +264,10 @@
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serializableSignals));
         }
 
-        // Utility function
-        function getRandomInt(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-
-        // --- Function to dynamically update density data for the chart ---
         function updateMockDensityData(signal) {
             const density = signal.density;
             let densityChanged = false;
             
-            // Introduce minor fluctuations (+/- 10 vehicles) to simulate real-time traffic changes
             directionLabels.forEach(dir => {
                 let currentValue = density[dir];
                 let newValue = Math.max(20, Math.min(250, currentValue + getRandomInt(-10, 10)));
@@ -155,16 +284,13 @@
         }
 
         // =================================================================
-        // 1. Map Initialization
+        // 1. Map Initialization (Updated to add map click listener)
         // =================================================================
         function initMap() {
-            if (!loadDataFromStorage()) {
-                alert("Error: User Mode (user.html) must be loaded first to initialize the traffic data. Please load user.html first.");
-                mockSignals = [{ id: "I0", name: "LOAD FAILED - Refresh user.html first", lat: 18.5204, lng: 73.8567, marker: null, state: { N: { color: "red", timer: 10 }, S: { color: "red", timer: 10 }, E: { color: "red", timer: 10 }, W: { color: "red", timer: 10 } }, density: { N: 0, S: 0, E: 0, W: 0 } }];
-            }
+            loadDataFromStorage(); 
             
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 18.5204, lng: 73.8567 },
+                center: INITIAL_COORDS,
                 zoom: 13,
                 mapTypeControl: false,
             });
@@ -173,15 +299,18 @@
             trafficLayer.setMap(map);
             infoWindow = new google.maps.InfoWindow();
             
+            // NEW FEATURE INTEGRATION: Listener to hide dashboard when map or info window are deselected
+            map.addListener('click', hideControlDashboard); 
+            infoWindow.addListener('closeclick', hideControlDashboard);
+
             addSignalOverlays();
+            fetchAndDisplayIssues();
             setInterval(updateSignalTimers, 1000);
             
-            // 1. Auto-predictor runs every 10s
             setInterval(() => {
                 mockSignals.forEach(signal => runAutomaticPredictor(signal));
             }, 10000); 
 
-            // 2. Chart data updates every 20 seconds (as requested)
             setInterval(() => {
                 if (currentSignalId) {
                     const signal = mockSignals.find(s => s.id === currentSignalId);
@@ -190,10 +319,197 @@
                     }
                 }
             }, 20000); 
+
+            // Sync issue data periodically for resolution update
+            setInterval(fetchAndDisplayIssues, 30000); 
+        }
+
+        /**
+         * Hides the traffic signal control dashboard and clears the current signal selection.
+         */
+        function hideControlDashboard() {
+            currentSignalId = null;
+            document.getElementById('control-dashboard').style.display = 'none';
+            document.getElementById('dashboard-title').textContent = 'Select a Signal on the Map to View its Control Panel';
+            
+            if (infoWindow) {
+                infoWindow.close();
+            }
         }
 
         // =================================================================
-        // Signal Overlay and Timer Logic (Rereads data from storage)
+        // 2. Issue Management (Corrected Logic & Manual Deletion)
+        // =================================================================
+        function fetchAndDisplayIssues() {
+            // CRITICAL FIX: Ensure ALL old markers are cleared before new ones are drawn.
+            issueMarkers.forEach(marker => marker.setMap(null));
+            issueMarkers = [];
+
+            const tableBody = document.getElementById('issue-table-body');
+            tableBody.innerHTML = '<tr><td colspan="3">Fetching data...</td></tr>';
+
+            // Use the Master Key for GET (reading)
+            fetch(JSONBIN_GET_URL, {
+                method: 'GET',
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Ensure array structure is robustly extracted
+                const issues = Array.isArray(data.record) ? data.record : (Array.isArray(data) ? data : []);
+                const activeIssues = issues.filter(i => i.status === 'not solved');
+                
+                // --- 1. Map Overlay (Full Active List) ---
+                activeIssues.forEach(issue => {
+                    const icon = getIssueIcon(issue.query);
+                    
+                    const lat = parseFloat(issue.lat);
+                    const lng = parseFloat(issue.lng);
+
+                    if (isNaN(lat) || isNaN(lng)) {
+                        console.error("Skipping map marker due to invalid coordinates:", issue);
+                        return;
+                    }
+
+                    const marker = new google.maps.Marker({
+                        position: { lat: lat, lng: lng }, // Use parsed numbers
+                        map: map,
+                        title: `${issue.query.toUpperCase()} - Reported ${new Date(issue.timestamp).toLocaleDateString()}`,
+                        icon: {
+                            url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="14" fill="%23FFD700" stroke="%23000000" stroke-width="2"/><text x="15" y="20" font-family="Arial" font-size="16" fill="%23000000" text-anchor="middle">' + icon + '</text></svg>',
+                            scaledSize: new google.maps.Size(30, 30),
+                            anchor: new google.maps.Point(15, 30)
+                        }
+                    });
+                    marker.issueId = issue.id;
+                    marker.addListener('click', () => {
+                        infoWindow.setContent(`<b>Road Issue:</b> ${issue.query.toUpperCase()}<br>Reported: ${new Date(issue.timestamp).toLocaleString()}<br>Status: ${issue.status.toUpperCase()}`);
+                        infoWindow.open(map, marker);
+                    });
+                    issueMarkers.push(marker);
+                });
+                
+                // --- 2. Sidebar Filtering (Filtered List) ---
+                const filteredIssues = activeIssues.filter(issue => {
+                    if (!currentAdminPosition) return true; // Show all in table if location is unknown
+                    
+                    const lat = parseFloat(issue.lat);
+                    const lng = parseFloat(issue.lng);
+                    if (isNaN(lat) || isNaN(lng)) return false; 
+
+                    const adminLatLng = new google.maps.LatLng(currentAdminPosition.lat, currentAdminPosition.lng);
+                    const issueLatLng = new google.maps.LatLng(lat, lng);
+                    const distance = google.maps.geometry.spherical.computeDistanceBetween(adminLatLng, issueLatLng); 
+                    
+                    return distance <= NEARBY_KM * 1000;
+                });
+                
+                // Update Sidebar Table (must clear and re-populate the table)
+                tableBody.innerHTML = filteredIssues.length === 0 
+                    ? '<tr><td colspan="3">No unresolved issues found.</td></tr>' 
+                    : '';
+
+                filteredIssues.forEach(issue => {
+                     const icon = getIssueIcon(issue.query);
+                     const lat = parseFloat(issue.lat);
+                     const lng = parseFloat(issue.lng);
+
+                     const row = tableBody.insertRow();
+                     row.className = 'issue-row';
+                     // Store issue ID on the row for easy manual deletion
+                     row.setAttribute('data-issue-id', issue.id); 
+                     row.setAttribute('data-status', issue.status);
+                     row.innerHTML = `
+                         <td>${icon} ${issue.query}</td>
+                         <td>${new Date(issue.timestamp).toLocaleTimeString()}</td>
+                         <td>
+                             <button class="resolve-btn" onclick="resolveIssue('${issue.id}')">Resolve</button>
+                             <button class="location-btn" onclick="zoomToLocation(${lat}, ${lng})">Map</button>
+                         </td>
+                     `;
+                });
+
+            })
+            .catch(error => {
+                console.error('Error fetching issues (JSONBin access failed):', error);
+                tableBody.innerHTML = '<tr><td colspan="3">Error loading issues. Check JSONBin key/ID.</td></tr>';
+            });
+        }
+
+        function resolveIssue(issueId) {
+            if (!confirm("Are you sure you want to mark this issue as RESOLVED? This will remove it from the map.")) return;
+
+            // Step 1: GET the current data (Using Master Key)
+            fetch(JSONBIN_GET_URL, {
+                method: 'GET',
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const issues = Array.isArray(data.record) ? data.record : [];
+                let issueFound = false;
+
+                // Mark the issue as resolved in the data array
+                issues.forEach(issue => {
+                    if (issue.id === issueId) {
+                        issue.status = 'resolved';
+                        issueFound = true;
+                    }
+                });
+
+                if (!issueFound) throw new Error('Issue not found in DB.');
+
+                // Step 2: PUT the updated data back to JSONBin (Using Secret Key for writing)
+                return fetch(JSONBIN_PUT_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Secret-Key': JSONBIN_WRITE_KEY // Using Secret Key or Master Key
+                    },
+                    body: JSON.stringify(issues)
+                });
+            })
+            .then(res => {
+                if (res.ok) {
+                    alert('Issue marked as resolved.');
+                    
+                    // CRITICAL MANUAL FIX: Delete the map marker and sidebar row immediately
+                    const markerIndex = issueMarkers.findIndex(m => m.issueId === issueId);
+                    if (markerIndex !== -1) {
+                        issueMarkers[markerIndex].setMap(null); // Remove marker from map
+                        issueMarkers.splice(markerIndex, 1); // Remove from JS array
+                    }
+
+                    // Remove the row from the sidebar DOM
+                    const row = document.querySelector(`#issue-table-body > tr[data-issue-id="${issueId}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                    
+                    // If the table is now empty, reset the text
+                    const tableBody = document.getElementById('issue-table-body');
+                    if (tableBody.children.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3">No unresolved issues found.</td></tr>';
+                    }
+
+                } else {
+                    console.error('PUT failed with status:', res.status, res.statusText);
+                    alert('Error resolving issue in database. Please check console.');
+                }
+            })
+            .catch(error => {
+                console.error('Error in resolution transaction:', error);
+                alert('An error occurred during resolution. Check JSONBin key/ID.');
+            });
+        }
+
+        function zoomToLocation(lat, lng) {
+            map.setCenter({ lat, lng });
+            map.setZoom(17);
+        }
+
+        // =================================================================
+        // 3. Signal Control and Predictor (Existing)
         // =================================================================
         function addSignalOverlays() {
             mockSignals.forEach(signal => {
@@ -208,7 +524,8 @@
                     }
                 });
                 signal.marker = marker;
-                marker.addListener('click', () => {
+                marker.addListener('click', (event) => {
+                    // Clicking a marker automatically opens the dashboard
                     infoWindow.setContent(getSignalInfoContent(signal));
                     infoWindow.open(map, marker);
                     openControlDashboard(signal.id); 
@@ -237,7 +554,6 @@
         }
 
         function updateSignalTimers() {
-            // REREAD data from storage every second to get updates from user.html (timer/rotation) OR manual override (this page)
             loadDataFromStorage(); 
             
             mockSignals.forEach(signal => {
@@ -265,10 +581,6 @@
                 }
             });
         }
-
-        // =================================================================
-        // ENTERPRISE DASHBOARD LOGIC (Writes to Local Storage)
-        // =================================================================
 
         function openControlDashboard(signalId) {
             currentSignalId = signalId;
@@ -341,69 +653,59 @@
             const currentGreenDir = directionLabels.find(dir => signal.state[dir].color === 'green');
             const currentGreenAxis = (currentGreenDir === 'N' || currentGreenDir === 'S') ? ['N', 'S'] : ['E', 'W'];
 
-            // Check if the priority axis (heaviest traffic) is currently RED
             if (signal.state[priorityAxis[0]].color === 'red') {
-                // PRIORITY SWITCH TRIGGERED: Update local mockSignals and save
                 priorityAxis.forEach(dir => { signal.state[dir].color = 'green'; signal.state[dir].timer = 25; });
                 crossingAxis.forEach(dir => { signal.state[dir].color = 'red'; signal.state[dir].timer = 35; });
 
-                saveDataToStorage(); // Save predictor decision
+                saveDataToStorage();
                  if (statusEl) { statusEl.textContent = `Auto-Prediction: SWITCHED to ${priorityAxis.join('/')} (Density: ${maxDensity}).`; statusEl.style.color = 'red'; }
             } else {
                  if (statusEl) { statusEl.textContent = `Auto-Prediction: ${currentGreenAxis.join('/')} FLOWING. Next priority: ${priorityAxis.join('/')} (Density: ${maxDensity}).`; statusEl.style.color = 'green'; }
             }
         }
 
-        /**
-         * Sets the manual override and saves the state to Local Storage.
-         */
         function setManualSignal(direction) {
             const signal = mockSignals.find(s => s.id === currentSignalId);
             if (!signal) return;
 
-            // 1. Set Manual Mode Flags
             isManualMode[signal.id] = true;
             localStorage.setItem(`isManual-${signal.id}`, 'true'); 
 
-            // 2. Set the Signal State (The key change!)
             directionLabels.forEach(dir => {
-                // Set chosen direction to GREEN, others to RED
                 signal.state[dir].color = (dir === direction) ? 'green' : 'red';
-                signal.state[dir].timer = 60; // Set a long manual timer
+                signal.state[dir].timer = 60;
             });
 
-            // 3. Save the NEW STATE and MANUAL FLAG to Local Storage
             saveDataToStorage(); 
             updateDashboard(signal);
         }
 
-        /**
-         * Resets to Automatic and saves the resulting auto state to Local Storage.
-         */
         function resetAutomatic() {
             const signal = mockSignals.find(s => s.id === currentSignalId);
             if (!signal) return;
             
-            // 1. Reset Manual Mode Flags
             isManualMode[signal.id] = false;
-            localStorage.setItem(`isManual-${signal.id}`, 'false'); // Persist reset status
+            localStorage.setItem(`isManual-${signal.id}`, 'false');
             
-            // 2. Run predictor to establish the new auto-state and save it
-            runAutomaticPredictor(signal); // This function runs the logic AND saves the state
+            runAutomaticPredictor(signal);
             updateDashboard(signal);
         }
 
         // =================================================================
-        // Search and Geolocation & Navigation (Shared)
+        // 4. Search and Navigation (Existing)
         // =================================================================
         function findMyLocation() {
             if ('geolocation' in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                        currentAdminPosition = pos;
                         map.setCenter(pos);
                         map.setZoom(15);
-                        new google.maps.Marker({ position: pos, map: map, title: "Your Location" });
+                        new google.maps.Marker({ position: pos, map: map, title: "Your Admin Location" });
+                        
+                        document.getElementById('my-location-status').textContent = `Showing issues within ${NEARBY_KM}km of your location.`;
+                        fetchAndDisplayIssues();
                     },
                     (error) => { console.error("Geolocation Error:", error.message); alert("Could not retrieve your location. Error: " + error.message); }
                 );
@@ -424,10 +726,11 @@
         }
         
         function switchMode(currentPage) {
-            if (currentPage === 'user') {
-                window.location.href = 'enterprise.html';
-            } else if (currentPage === 'enterprise') {
+            // FIX: Update to point to the new filenames
+            if (currentPage === 'enterprise') {
                 window.location.href = 'user.html';
+            } else if (currentPage === 'user') {
+                window.location.href = 'enterprise.html';
             }
         }
         
@@ -436,10 +739,13 @@
         window.resetAutomatic = resetAutomatic;
         window.findMyLocation = findMyLocation;
         window.handleSearch = handleSearch;
+        window.resolveIssue = resolveIssue;
+        window.zoomToLocation = zoomToLocation;
+        window.hideControlDashboard = hideControlDashboard; // Exposed new function
         
         function loadGoogleMapsScript() {
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&libraries=geometry`;
             script.async = true;
             document.head.appendChild(script);
         }
