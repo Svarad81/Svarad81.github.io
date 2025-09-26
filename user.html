@@ -11,16 +11,21 @@
         header h1 { margin: 0; font-size: 1.5em; }
         .mode-switch { background-color: #28a745; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; }
         .mode-switch:hover { background-color: #218838; }
-        .search-container { padding: 15px 20px; display: flex; gap: 10px; background-color: white; border-bottom: 1px solid #ddd; }
+        .search-container { padding: 15px 20px; display: flex; gap: 10px; background-color: white; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
         #search-input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         #search-button, #my-location-button { background-color: #6c757d; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; }
-        #map { height: 85vh; width: 100%; }
+        #map { height: 75vh; width: 100%; }
         /* Custom InfoWindow for Signal Timer */
         .signal-info-content { font-weight: bold; padding: 5px; font-size: 1.1em; }
         .signal-info-content .status-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.95em; }
         .red-light { color: #dc3545; }
         .green-light { color: #28a745; }
         .yellow-light { color: #ffc107; }
+        /* New Styles for Reporting and Planner */
+        .report-section, .planner-section { margin-top: 10px; padding: 10px; border: 1px solid #eee; background-color: #fcfcfc; border-radius: 4px; }
+        .report-section select, .report-section button { padding: 8px; margin-right: 5px; }
+        .planner-section input, .planner-section button { padding: 8px; margin-right: 5px; }
+        #route-info { margin-top: 10px; padding: 10px; border: 1px solid #ccc; background-color: #fff; }
     </style>
 </head>
 <body>
@@ -34,23 +39,54 @@
         <input type="text" id="search-input" placeholder="Search a location or intersection...">
         <button id="search-button" onclick="handleSearch()">Search</button>
         <button id="my-location-button" onclick="findMyLocation()">My Location 📍</button>
+
+        <div class="report-section">
+            <label for="issue-type">Report an Issue:</label>
+            <select id="issue-type">
+                <option value="potholes">Potholes 🚧</option>
+                <option value="construction">Construction 🚜</option>
+                <option value="lane closure">Lane Closure ⚠️</option>
+                <option value="accident">Accident 💥</option>
+                <option value="road blockage">Road Blockage 🛑</option>
+            </select>
+            <button onclick="reportIssue()">Submit Report</button>
+        </div>
+        
+        <div class="planner-section">
+            <label>Travel Planner (Driving only):</label>
+            <input type="text" id="start-location" placeholder="Start (e.g., My Location)" value="My Location">
+            <input type="text" id="destination-location" placeholder="Destination Address">
+            <button onclick="planTrip()">Plan Route</button>
+            <button id="clear-route-button" onclick="clearTrip()" style="background-color: #dc3545;">Clear Route ✖️</button>
+        </div>
+        
+        <div id="route-info" style="display: none;"></div>
     </div>
 
     <div id="map"></div>
 
     <script>
+        // --- API Keys and Configuration ---
         const API_KEY = 'AIzaSyD6kaZpN3w7eqo3V_EV0Ut_7la75UYhBts'; 
+        const JSONBIN_MASTER_KEY = '$2a$10$mdQ2p6Aczav/B7UASEbddOtXtV7ZukGzb1IoUPBX8Rg4kwcC7Z1Sq'; 
+        const JSONBIN_BIN_ID = '68d66715ae596e708ffc77c0'; 
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`;
+        const JSONBIN_PUT_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+        
         const LOCAL_STORAGE_KEY = 'trafficSignalsData';
+
         let map;
         let trafficLayer;
         let infoWindow;
+        let directionsService;
+        let directionsRenderer;
+        let currentPosition = null; 
+        let issueMarkers = [];
         const INITIAL_COORDS = { lat: 18.5204, lng: 73.8567 };
 
-        // --- Core Data Variables ---
+        // --- Core Data Variables (Existing) ---
         const directionLabels = ['N', 'E', 'W', 'S'];
         let mockSignals = []; 
-        
-        // --- 30 ACCURATE INTERSECTION COORDINATES ---
         const mockIntersectionLocations = [
             { name: "Swami Vivekanad chowk , pradhikaran Rd", lat: 18.656294, lng: 73.765169 }, { name: "Chatrapati Shivaji Maharaj Chowk , Pradhikaran Rd", lat: 18.661110, lng: 73.764088 },
             { name: "Karve Putala", lat: 18.502102, lng: 73.815419 }, { name: "Chatrapati Rajaram Maharaj Path", lat: 18.502806, lng: 73.818342 },
@@ -73,10 +109,22 @@
         function getRandomInt(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
+        
+        // --- New Helper Functions ---
+        function getIssueIconData(query) {
+            // Returns data for a reliable Google Maps Symbol
+            switch (query) {
+                case 'potholes': return { fillColor: '#FFA500', iconText: '🚧' }; 
+                case 'construction': return { fillColor: '#808080', iconText: '🚜' }; 
+                case 'lane closure': return { fillColor: '#FF0000', iconText: '⚠️' }; 
+                case 'accident': return { fillColor: '#800080', iconText: '💥' }; 
+                case 'road blockage': return { fillColor: '#000000', iconText: '🛑' }; 
+                default: return { fillColor: '#FFFF00', iconText: '📍' }; 
+            }
+        }
 
-        // --- Data Generation and Persistence Logic ---
+        // --- Data Generation and Persistence Logic (Existing & Fixed) ---
         function generateRandomSignalData() {
-            // Generates a random, but valid, starting state for a 4-way signal
             const isNSAxisGreen = Math.random() < 0.5;
             const greenDuration = getRandomInt(15, 30);
             const redDuration = getRandomInt(25, 40);
@@ -101,43 +149,49 @@
             return { state, density };
         }
 
-        // Initialize or Load Data from Local Storage
+        function createInitialSignals() {
+             mockSignals = mockIntersectionLocations.map((location, index) => {
+                const randomData = generateRandomSignalData();
+                return {
+                    id: `I${index + 1}`,
+                    name: location.name,
+                    lat: location.lat,
+                    lng: location.lng,
+                    marker: null,
+                    state: randomData.state,
+                    density: randomData.density
+                };
+            });
+            saveDataToStorage();
+        }
+
         function loadDataFromStorage() {
             const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
             
             if (storedData) {
-                const parsedData = JSON.parse(storedData);
-                mockSignals = mockIntersectionLocations.map((location, index) => {
-                    const storedSignal = parsedData[index] || {};
-                    return {
-                        id: `I${index + 1}`,
-                        name: location.name,
-                        lat: location.lat,
-                        lng: location.lng,
-                        marker: null,
-                        state: storedSignal.state || generateRandomSignalData().state,
-                        density: storedSignal.density || generateRandomSignalData().density
-                    };
-                });
+                try {
+                    const parsedData = JSON.parse(storedData);
+                    mockSignals = mockIntersectionLocations.map((location, index) => {
+                        const storedSignal = parsedData[index] || {};
+                        return {
+                            id: `I${index + 1}`,
+                            name: location.name,
+                            lat: location.lat,
+                            lng: location.lng,
+                            marker: null,
+                            state: storedSignal.state && Object.keys(storedSignal.state).length === 4 ? storedSignal.state : generateRandomSignalData().state,
+                            density: storedSignal.density && Object.keys(storedSignal.density).length === 4 ? storedSignal.density : generateRandomSignalData().density
+                        };
+                    });
+                } catch (e) {
+                    console.error("Local Storage data corrupted. Regenerating signals.", e);
+                    createInitialSignals();
+                }
             } else {
-                // If no data, generate a NEW random set (first load)
-                mockSignals = mockIntersectionLocations.map((location, index) => {
-                    const randomData = generateRandomSignalData();
-                    return {
-                        id: `I${index + 1}`,
-                        name: location.name,
-                        lat: location.lat,
-                        lng: location.lng,
-                        marker: null,
-                        state: randomData.state,
-                        density: randomData.density
-                    };
-                });
-                saveDataToStorage(); // Initial save
+                createInitialSignals();
             }
         }
 
-        // Save current data state to Local Storage
         function saveDataToStorage() {
             const serializableSignals = mockSignals.map(s => {
                 const { marker, ...rest } = s;
@@ -147,10 +201,10 @@
         }
 
         // =================================================================
-        // 1. Map Initialization
+        // 1. Map Initialization (Extended & Fixed)
         // =================================================================
         function initMap() {
-            loadDataFromStorage(); // Load or generate data
+            loadDataFromStorage(); 
             
             map = new google.maps.Map(document.getElementById('map'), {
                 center: INITIAL_COORDS,
@@ -158,18 +212,22 @@
                 mapTypeControl: false,
             });
 
-            // Enable Traffic Layer
             trafficLayer = new google.maps.TrafficLayer();
             trafficLayer.setMap(map);
             infoWindow = new google.maps.InfoWindow();
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true });
 
-            addSignalOverlays();
-            // Start the synchronization and rotation timer
+            addSignalOverlays(); 
+            fetchAndDisplayIssues();
             setInterval(updateSignalTimers, 1000);
+            
+            // Sync issue data periodically for resolution update
+            setInterval(fetchAndDisplayIssues, 30000); 
         }
 
         // =================================================================
-        // Signal Overlay and Timer Logic
+        // 2. Signal Overlay and Timer Logic (Existing)
         // =================================================================
         function addSignalOverlays() {
             mockSignals.forEach(signal => {
@@ -214,8 +272,6 @@
 
         function updateSignalTimers() {
             let stateChanged = false;
-
-            // Load data first to capture any MANUAL changes from Enterprise Mode
             loadDataFromStorage(); 
 
             mockSignals.forEach(signal => {
@@ -230,7 +286,6 @@
                         stateChanged = true;
                     }
 
-                    // Only rotate traffic lights if not under manual control
                     if (!isManuallyControlled && status.timer === 0) {
                         const isNS = (dir === 'N' || dir === 'S');
                         const axisDirs = isNS ? ['N', 'S'] : ['E', 'W'];
@@ -261,23 +316,320 @@
                 }
             });
 
-            // Save state back to Local Storage (pushes updates for Enterprise Mode to read)
             if (stateChanged) {
                 saveDataToStorage();
             }
         }
+        
+        // =================================================================
+        // 3. Issue Reporting (Finalized Logic)
+        // =================================================================
+        function reportIssue() {
+            if (!currentPosition) {
+                alert("Please click 'My Location 📍' first to get your coordinates.");
+                return;
+            }
+
+            const query = document.getElementById('issue-type').value;
+            const newReport = {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                query: query,
+                lat: currentPosition.lat,
+                lng: currentPosition.lng,
+                status: "not solved",
+                timestamp: new Date().toISOString()
+            };
+            
+            const PUT_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+            fetch(JSONBIN_URL, {
+                method: 'GET',
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`GET failed with status ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                let currentIssues = Array.isArray(data.record) ? data.record : (Array.isArray(data) ? data : []);
+                
+                currentIssues.push(newReport);
+                
+                return fetch(PUT_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_MASTER_KEY
+                    },
+                    body: JSON.stringify(currentIssues)
+                });
+            })
+            .then(res => {
+                if (res.ok) {
+                    alert(`Issue "${query}" reported successfully at your current location!`);
+                    
+                    if (map && currentPosition) {
+                        map.setCenter(currentPosition);
+                        map.setZoom(17);
+                    }
+                    
+                    fetchAndDisplayIssues();
+                } else {
+                    throw new Error(`PUT failed with status ${res.status}`);
+                }
+            })
+            .catch(error => {
+                const status = error.message.split(' ').pop();
+                console.error(`JSONBin Transaction Error (Status ${status}): Check Bin ID/Master Key/Endpoint.`, error);
+                alert(`Error submitting report to database. Check console for details. Status: ${status}`);
+            });
+        }
 
         // =================================================================
-        // Search and Geolocation & Navigation (Shared)
+        // FINAL FIX: Issue Display Logic (Overlay)
+        // =================================================================
+        function fetchAndDisplayIssues() {
+            issueMarkers.forEach(marker => marker.setMap(null));
+            issueMarkers = [];
+
+            if (!map) {
+                console.warn("Map not yet initialized. Skipping issue marker display.");
+                return;
+            }
+
+            fetch(JSONBIN_URL, {
+                method: 'GET',
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`GET failed with status ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                const issues = Array.isArray(data.record) ? data.record : (Array.isArray(data) ? data : []);
+                
+                // Filter only unresolved issues for display (This handles automatic deletion)
+                const activeIssues = issues.filter(i => i.status === 'not solved');
+
+                activeIssues.forEach(issue => {
+                    const lat = parseFloat(issue.lat);
+                    const lng = parseFloat(issue.lng);
+
+                    if (isNaN(lat) || isNaN(lng)) {
+                        console.error("Skipping issue due to invalid coordinates in DB:", issue);
+                        return; 
+                    }
+
+                    const issueInfo = getIssueIconData(issue.query);
+                    
+                    // FIX: Use a simple, reliable Google Maps Symbol
+                    const markerIcon = {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: issueInfo.fillColor,
+                        fillOpacity: 0.9,
+                        strokeWeight: 1,
+                        scale: 8,
+                        label: {
+                            text: issueInfo.iconText, 
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "#000000"
+                        }
+                    };
+
+                    const marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(lat, lng), 
+                        map: map,
+                        title: `${issue.query.toUpperCase()} - Reported ${new Date(issue.timestamp).toLocaleDateString()}`,
+                        icon: markerIcon
+                    });
+                    
+                    marker.addListener('click', () => {
+                        infoWindow.setContent(`<b>Road Issue:</b> ${issueInfo.iconText} ${issue.query.toUpperCase()}<br>Reported: ${new Date(issue.timestamp).toLocaleString()}`);
+                        infoWindow.open(map, marker);
+                    });
+                    issueMarkers.push(marker);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching/displaying issues:', error);
+            });
+        }
+
+
+        // =================================================================
+        // 4. Travel Planner (LOGIC UPDATED FOR NON-ZERO DELAY)
+        // =================================================================
+        function planTrip() {
+            const startInput = document.getElementById('start-location').value.trim();
+            const destination = document.getElementById('destination-location').value.trim();
+            const routeInfoEl = document.getElementById('route-info');
+            routeInfoEl.style.display = 'none';
+
+            if (!destination) {
+                alert("Please enter a destination.");
+                return;
+            }
+            
+            if (directionsRenderer) {
+                directionsRenderer.setDirections({ routes: [] });
+            }
+
+            let start = startInput;
+            if (startInput.toLowerCase() === 'my location' && currentPosition) {
+                start = new google.maps.LatLng(currentPosition.lat, currentPosition.lng);
+            } else if (startInput.toLowerCase() === 'my location' && !currentPosition) {
+                 alert("Please click 'My Location 📍' or enter a starting address.");
+                return;
+            }
+            
+            directionsService.route({
+                origin: start,
+                destination: destination,
+                travelMode: google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    trafficModel: 'bestguess',
+                    departureTime: new Date()
+                }
+            }, (response, status) => {
+                if (status === 'OK') {
+                    if (directionsRenderer) {
+                        directionsRenderer.setDirections(response);
+                    }
+                    
+                    const route = response.routes[0].legs[0];
+                    const routePath = response.routes[0].overview_path;
+
+                    const totalDurationSeconds = route.duration.value;
+                    const trafficDurationSeconds = route.duration_in_traffic ? route.duration_in_traffic.value : totalDurationSeconds;
+
+                    fetch(JSONBIN_URL, { method: 'GET', headers: { 'X-Master-Key': JSONBIN_MASTER_KEY } })
+                    .then(res => res.json())
+                    .then(data => {
+                        const issues = Array.isArray(data.record) ? data.record.filter(i => i.status === 'not solved') : [];
+                        const predictedDelays = calculatePredictedDelays(routePath, issues);
+                        displayRouteInfo(route, trafficDurationSeconds, predictedDelays);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching issues for planner:', error);
+                        displayRouteInfo(route, trafficDurationSeconds, { issueDelay: 0, signalDelay: 0 }, " (Issue data unavailable)"); 
+                    });
+
+                } else {
+                    alert('Could not find a route. Reason: ' + status);
+                    if (directionsRenderer) {
+                        directionsRenderer.setDirections({ routes: [] });
+                    }
+                }
+            });
+        }
+        
+        function clearTrip() {
+            if (directionsRenderer) {
+                directionsRenderer.setDirections({ routes: [] });
+            }
+            
+            document.getElementById('start-location').value = 'My Location';
+            document.getElementById('destination-location').value = '';
+            document.getElementById('route-info').style.display = 'none';
+            
+            if (map) {
+                map.setZoom(13); 
+                map.setCenter(INITIAL_COORDS);
+            }
+        }
+
+   // --- Replacement for the existing calculatePredictedDelays function ---
+function calculatePredictedDelays(routePath, issues) {
+    let signalDetected = false;
+    let issueDetected = false;
+    
+    const NEARBY_THRESHOLD_METERS = 500; 
+
+    // Check if ANY Signal is Near Route
+    mockSignals.forEach(signal => {
+        const signalLatLng = new google.maps.LatLng(signal.lat, signal.lng);
+        let closestDist = google.maps.geometry.spherical.computeDistanceToLine(signalLatLng, routePath);
+        
+        if (closestDist <= NEARBY_THRESHOLD_METERS) {
+            signalDetected = true;
+        }
+    });
+
+    // Check if ANY Issue is Near Route
+    issues.forEach(issue => {
+        const issueLatLng = new google.maps.LatLng(parseFloat(issue.lat), parseFloat(issue.lng));
+        let closestDist = google.maps.geometry.spherical.computeDistanceToLine(issueLatLng, routePath);
+        
+        if (closestDist <= NEARBY_THRESHOLD_METERS) {
+            issueDetected = true;
+        }
+    });
+
+    // --- DIRECT RANDOM DELAY ASSIGNMENT (1 to 3 minutes) ---
+    
+    let signalDelaySeconds = 0;
+    if (signalDetected) {
+        // Assigns 1, 2, or 3 minutes, converted to seconds
+        signalDelaySeconds = getRandomInt(1, 3) * 60; 
+    }
+    
+    let issueDelaySeconds = 0;
+    if (issueDetected) {
+        // Assigns 1, 2, or 3 minutes, converted to seconds
+        issueDelaySeconds = getRandomInt(1, 3) * 60; 
+    }
+
+    return { 
+        signalDelay: signalDelaySeconds, 
+        issueDelay: issueDelaySeconds 
+    };
+}
+  // --- Replacement for the existing displayRouteInfo function ---
+function displayRouteInfo(route, trafficDurationSeconds, delays, warning = "") {
+    const routeInfoEl = document.getElementById('route-info');
+    const totalPredictedDelay = delays.signalDelay + delays.issueDelay;
+    
+    // Use Math.ceil to round up, ensuring any delay > 0 seconds shows as >= 1 minute.
+    const toMinutes = (sec) => Math.ceil(sec / 60); 
+
+    const finalPredictedTimeSec = trafficDurationSeconds + totalPredictedDelay;
+
+    const displaySignalDelay = delays.signalDelay > 0 ? toMinutes(delays.signalDelay) : 0;
+    const displayIssueDelay = delays.issueDelay > 0 ? toMinutes(delays.issueDelay) : 0;
+
+    routeInfoEl.innerHTML = `
+        <h4>Route Information ${warning}</h4>
+        <p><strong>Distance:</strong> ${route.distance.text}</p>
+        <hr>
+        <p><strong>Estimated Travel Time (w/ Google Traffic):</strong> ${toMinutes(trafficDurationSeconds)} minutes</p>
+        <p><strong>Predicted Signal Delays:</strong> +${displaySignalDelay} minutes</p>
+        <p><strong>Predicted Issue Delays:</strong> +${displayIssueDelay} minutes</p>
+        <hr>
+        <p><strong>TOTAL PREDICTED TRIP TIME: ${toMinutes(finalPredictedTimeSec)} minutes</strong></p>
+    `;
+    routeInfoEl.style.display = 'block';
+}
+
+        // =================================================================
+        // 5. Search and Navigation (Existing)
         // =================================================================
         function findMyLocation() {
             if ('geolocation' in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                        currentPosition = pos;
                         map.setCenter(pos);
                         map.setZoom(15);
                         new google.maps.Marker({ position: pos, map: map, title: "You are here!" });
+                        document.getElementById('start-location').value = 'My Location';
+                        
+                        fetchAndDisplayIssues();
                     },
                     (error) => { console.error("Geolocation Error:", error.message); alert("Could not retrieve your location. Error: " + error.message); }
                 );
@@ -305,9 +657,16 @@
             }
         }
         
+        // Expose functions globally for HTML buttons
+        window.findMyLocation = findMyLocation;
+        window.handleSearch = handleSearch;
+        window.reportIssue = reportIssue;
+        window.planTrip = planTrip;
+        window.clearTrip = clearTrip;
+
         function loadGoogleMapsScript() {
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&libraries=geometry,places`;
             script.async = true;
             document.head.appendChild(script);
         }
