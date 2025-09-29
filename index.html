@@ -85,13 +85,14 @@
             transition: background-color 0.5s ease;
         }
 
+        /* Padding-top set to 20rem for spacing */
         .main-content {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 20rem 1rem 2rem 1rem; 
         }
 
-        /* --- Header Section --- */
+        /* --- Header Section for Scroll Hiding --- */
         .header {
             background-color: var(--glass-bg);
             backdrop-filter: blur(10px) saturate(180%);
@@ -99,13 +100,24 @@
             padding: 3rem 1rem;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
-            position: sticky;
+            
+            position: fixed; 
             top: 0;
+            width: 100%;
             z-index: 100;
+            
             box-shadow: 0 4px 20px var(--shadow-color);
-            transition: background-color 0.5s ease, backdrop-filter 0.5s ease;
+            
+            /* REVERTED: Changed transform transition duration back to 0.3s */
+            transition: background-color 0.5s ease, backdrop-filter 0.5s ease, transform 0.3s ease-in-out; 
+            transform: translateY(0); 
         }
-
+        
+        /* Class to hide the header when scrolling down */
+        .header.hide {
+            transform: translateY(-100%); 
+        }
+        
         .header-content {
             max-width: 800px;
             margin: 0 auto;
@@ -462,6 +474,10 @@
             .footer {
                 padding: 1.5rem 1rem;
             }
+            /* Adjusted mobile padding-top to 15rem */
+            .main-content { 
+                padding-top: 15rem; 
+            }
         }
 
         @media (max-width: 480px) {
@@ -476,6 +492,8 @@
             }
             .main-content {
                 padding: 1.5rem 0.75rem;
+                /* Keep top padding adjusted */
+                padding-top: 15rem; 
             }
             .project-card {
                 padding: 1.25rem;
@@ -537,9 +555,9 @@
 
         // --- Project Data ---
         const projects = [
-            {
-                title: 'UrbanFlow Traffic Command System',
-                description: 'A synchronized, computer vision-inspired prototype enabling real-time traffic management. It provides dual-mode control (User View vs. Enterprise Dashboard) with dynamic density charting and instant manual signal override, ensuring seamless state synchronization across all interfaces.',
+             {
+                title: 'UrbanFlow Traffic Management System',
+                description: 'Dual-mode, real-time traffic management prototype with computer vision. Features include synchronized user and enterprise views, dynamic density charting, and instant manual signal override with seamless state synchronization.',
                 projectFile: 'user.html'
             },
             {
@@ -552,7 +570,6 @@
                 description: 'Developed a secure and transparent blockchain-based voting system ensuring trust, integrity, and tamper-proof election processes.',
                 projectFile: 'blockchain-voting-system.html'
             },
-             
            
         ];
 
@@ -643,6 +660,30 @@
             });
         };
 
+        // --- Smart Header Logic ---
+        const header = document.querySelector('.header');
+        let lastScrollY = window.scrollY;
+        
+        const handleScroll = () => {
+            const headerHeight = header.offsetHeight + 10; 
+            
+            if (window.scrollY > lastScrollY && window.scrollY > headerHeight) {
+                // Scrolling down, hide the header
+                header.classList.add('hide');
+            } else if (window.scrollY < lastScrollY) {
+                // Scrolling up, show the header
+                header.classList.remove('hide');
+            }
+            
+            // If scrolled all the way to the top, ensure it's visible
+            if (window.scrollY === 0) {
+                 header.classList.remove('hide');
+            }
+
+            lastScrollY = window.scrollY;
+        };
+
+
         // --- Main Application Initialization ---
         const initializePage = async () => {
             loadingSpinner.style.display = 'block';
@@ -681,6 +722,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializePage();
             document.getElementById('current-year').textContent = new Date().getFullYear();
+            
+            // Attach the new scroll listener
+            window.addEventListener('scroll', handleScroll);
         });
     </script>
 
