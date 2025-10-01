@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Price Analyzer</title>
+    <!-- Load Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js CDN for graph visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        /* Custom styles for the card grid */
+        .grid-results {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        /* Keyframe for the loading spinner */
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+
+        .loading-spinner:before {
+            content: '';
+            box-sizing: border-box;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            margin-top: -15px;
+            margin-left: -15px;
+            border-radius: 50%;
+            border: 3px solid #ccc;
+            border-top-color: #007bff; /* Primary color */
+            animation: spinner .6s linear infinite;
+        }
+
+        /* Custom scrollbar for better look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* slate-300 */
+            border-radius: 4px;
+        }
+        
+        .explanation-box {
+            background-image: linear-gradient(135deg, #f0f4ff 0%, #e0e8ff 100%);
+            border-left: 5px solid #4f46e5; /* Indigo */
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#4f46e5', // Indigo-600
+                        'secondary': '#10b981', // Emerald-500
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <span class="text-2xl font-bold text-primary flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Smart Price Analyzer
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        <!-- Search Section -->
+        <div class="mb-12">
+            <h1 class="text-4xl font-extrabold text-gray-900 text-center mb-3">Find Your Best Deal</h1>
+            <p class="text-lg text-gray-600 text-center mb-8">Search for any product to compare prices across top e-commerce platforms using AI.</p>
+            
+            <div class="max-w-3xl mx-auto flex space-x-4">
+                <input type="text" id="productSearch" placeholder="Search for a product (e.g., iPhone 15 Pro, Nike Air Max shoes)..."
+                       class="flex-1 p-4 border border-gray-300 rounded-xl shadow-md focus:ring-primary focus:border-primary transition duration-150">
+                <button id="searchButton" onclick="searchProduct()"
+                        class="bg-primary hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out transform hover:scale-105 active:scale-100 disabled:opacity-50">
+                    Analyze Prices
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsContainer" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Comparison Results for: <span id="queryDisplay" class="text-primary"></span></h2>
+            
+            <!-- Price Chart -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl mb-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Price Distribution Chart</h3>
+                <div class="h-96">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Price Cards Grid -->
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Detailed Price Cards</h3>
+            <div id="priceCards" class="grid-results">
+                <!-- Price cards will be dynamically inserted here -->
+            </div>
+        </div>
+        
+        <!-- Explanation Section -->
+        <div id="explanationContainer" class="hidden mt-10">
+            <div class="explanation-box p-6 rounded-2xl shadow-xl">
+                <h3 class="text-xl font-bold text-gray-900 mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                    Smart Price Analysis
+                </h3>
+                <p id="analysisText" class="text-gray-700 leading-relaxed">
+                    <!-- AI explanation text will be inserted here -->
+                </p>
+                <div id="citationSection" class="mt-4 text-xs text-indigo-700 opacity-80 italic">
+                    <!-- Citations will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading & Error Section -->
+        <div id="statusSection" class="mt-12 text-center">
+            <div id="loadingIndicator" class="hidden relative h-10">
+                <div class="loading-spinner absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+                <p class="text-lg text-primary mt-12">Analyzing prices and generating insight...</p>
+            </div>
+            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative shadow-md" role="alert">
+                <strong class="font-bold">Error:</strong>
+                <span id="errorText" class="block sm:inline"></span>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module">
+        // --- Configuration & Initialization ---
+
+        // 🚨 IMPORTANT: You need ONE Google Gemini API Key for this application.
+        // If running this code outside of a secure environment (like Canvas), 
+        // replace the empty string with your key. Otherwise, leave it empty 
+        // for automatic injection by the platform.
+        const apiKey = "AIzaSyDfBl_Uoe9aXB-N-73lThJvThEj093R9bA"; 
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        
+        // Target Platforms for comparison (used in the LLM prompt)
+        const TARGET_PLATFORMS = "Amazon, Flipkart, Ajio, Croma, Myntra, Nykaa, Tata CLiQ, Blinkit, Zepto, JIO MART";
+
+        // Global Chart Instance
+        let priceChartInstance = null;
+
+        // DOM elements
+        const searchInput = document.getElementById('productSearch');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const priceCardsContainer = document.getElementById('priceCards');
+        const explanationContainer = document.getElementById('explanationContainer');
+        const analysisText = document.getElementById('analysisText');
+        const queryDisplay = document.getElementById('queryDisplay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const citationSection = document.getElementById('citationSection');
+
+        // --- Utility Functions ---
+
+        /**
+         * Parses the raw text response from the LLM (which is instructed to be pipe-delimited)
+         * into a structured array of objects.
+         * Expected format per line: Platform | Price | Currency | Reasoning | URL
+         */
+        function parsePriceData(rawText) {
+            console.log("Raw text received for parsing:", rawText);
+            const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+            const results = [];
+
+            // Attempt to skip potential header lines or markdown separators
+            const dataLines = lines.filter(line => 
+                !line.toLowerCase().includes('platform') && 
+                !line.includes('---') // Markdown table separator
+            );
+
+            dataLines.forEach(line => {
+                // Use a simple split by '|' and trim whitespace
+                const parts = line.split('|').map(part => part.trim());
+
+                // REQUIREMENT: Check for 5 parts now (Platform, Price, Currency, Reasoning, URL)
+                if (parts.length >= 5) {
+                    const platform = parts[0];
+                    // Clean price string: remove commas, currency symbols, and spaces
+                    const rawPrice = parts[1].replace(/[,₹$]/g, '').toLowerCase(); 
+                    const currency = parts[2] || '₹'; // Default to rupee if currency is missing
+                    const reasoning = parts[3];
+                    let url = parts[4].trim(); // Extract the URL
+
+                    // --- URL Validation and Correction ---
+                    if (url.toLowerCase() === 'null' || url.length === 0) {
+                        url = '';
+                    } else if (!url.startsWith('http')) {
+                         // If it looks like a domain but is missing the scheme, assume HTTPS
+                        url = `https://${url}`;
+                    }
+                    // -------------------------------------
+
+                    let price = null;
+                    if (rawPrice !== 'null' && rawPrice !== 'not found' && !isNaN(parseFloat(rawPrice))) {
+                        price = parseFloat(rawPrice);
+                    }
+
+                    results.push({
+                        platform,
+                        price,
+                        currency,
+                        reasoning,
+                        url: url // Use the validated URL
+                    });
+                } else {
+                     console.warn("Skipping line due to insufficient parts (expected 5, got " + parts.length + "):", line);
+                }
+            });
+
+            return results;
+        }
+
+        /** Shows/hides the loading spinner and disables the search button. */
+        function setLoading(isLoading) {
+            loadingIndicator.classList.toggle('hidden', !isLoading);
+            searchButton.disabled = isLoading;
+            searchButton.innerHTML = isLoading ? '<svg class="animate-spin h-5 w-5 mr-3 inline text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Analyzing' : 'Analyze Prices';
+        }
+
+        /** Displays an error message. */
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /** Clears the results and status indicators. */
+        function clearResults() {
+            resultsContainer.classList.add('hidden');
+            explanationContainer.classList.add('hidden');
+            loadingIndicator.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            priceCardsContainer.innerHTML = '';
+            analysisText.textContent = '';
+            citationSection.innerHTML = '';
+            if (priceChartInstance) {
+                priceChartInstance.destroy(); // Destroy previous chart instance
+                priceChartInstance = null;
+            }
+        }
+
+        /** Converts an array of source objects into HTML citation links. */
+        function formatCitations(sources) {
+            if (!sources || sources.length === 0) return '';
+            
+            const citationHtml = sources.map((source, index) => {
+                const domain = source.uri ? new URL(source.uri).hostname : 'Source';
+                return `<a href="${source.uri}" target="_blank" class="hover:underline">${domain}</a>`;
+            }).join(' | ');
+
+            return `Source Grounding: ${citationHtml}`;
+        }
+        
+        /**
+         * Renders the price data in the form of interactive cards. (Original implementation)
+         * @param {Array<Object>} pricesData - Array of price objects.
+         * @param {string} bestPlatform - The name of the platform with the best deal.
+         * @param {number} bestPrice - The lowest price found.
+         */
+        function renderPriceCardsView(pricesData, bestPlatform, bestPrice) {
+            const cardsHtml = pricesData.map(item => {
+                const isBest = item.platform === bestPlatform && bestPrice !== Infinity;
+                
+                const priceValue = (typeof item.price === 'number' && item.price !== null) ? item.price : null;
+
+                const priceText = priceValue !== null ? 
+                    `<span class="text-3xl font-extrabold">${item.currency || '₹'}${priceValue.toLocaleString('en-IN')}</span>` :
+                    `<span class="text-xl font-semibold text-gray-400">Not Found</span>`;
+                
+                const cardClass = isBest 
+                    ? 'border-secondary ring-4 ring-secondary/50 bg-green-50' 
+                    : 'border-gray-200 hover:shadow-lg transition duration-300';
+                
+                const badgeHtml = isBest 
+                    ? '<span class="absolute top-0 right-0 bg-secondary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl shadow-lg">BEST DEAL</span>' 
+                    : '';
+                
+                const buttonHtml = item.url
+                    ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" 
+                         class="mt-4 block text-center bg-primary hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-xl transition duration-150 transform hover:scale-[1.02] active:scale-100">
+                           View Deal
+                       </a>`
+                    : `<button disabled class="mt-4 block w-full text-center bg-gray-200 text-gray-500 text-sm font-semibold py-2 px-4 rounded-xl cursor-not-allowed">
+                           No Direct Link
+                       </button>`;
+
+                return `
+                    <div class="relative bg-white p-6 rounded-2xl shadow-md border-2 ${cardClass} flex flex-col justify-between">
+                        ${badgeHtml}
+                        <div>
+                            <p class="text-lg font-bold text-gray-800 mb-1">${item.platform}</p>
+                            <div class="mb-3">${priceText}</div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2 italic">${item.reasoning || 'Price information retrieved.'}</p>
+                        ${buttonHtml}
+                    </div>
+                `;
+            }).join('');
+
+            priceCardsContainer.innerHTML = cardsHtml;
+        }
+
+        /**
+         * Renders the price data as a bar chart using Chart.js.
+         * @param {Array<Object>} pricesData - Array of price objects.
+         * @param {string} bestPlatform - The name of the platform with the best deal.
+         * @param {number} bestPrice - The lowest price found.
+         */
+        function renderPriceChart(pricesData, bestPlatform, bestPrice) {
+            const chartData = pricesData
+                .filter(item => typeof item.price === 'number' && item.price !== null) // Filter out items with no price
+                .sort((a, b) => a.price - b.price); // Sort by price, lowest first
+
+            const labels = chartData.map(item => `${item.platform} (${item.currency}${item.price.toLocaleString('en-IN')})`);
+            const data = chartData.map(item => item.price);
+            
+            // Set bar colors: green for the best deal, indigo for others
+            const backgroundColors = chartData.map(item => 
+                item.platform === bestPlatform ? 'rgb(16, 185, 129, 0.8)' : 'rgb(79, 70, 229, 0.7)'
+            );
+            const borderColors = chartData.map(item => 
+                item.platform === bestPlatform ? 'rgb(16, 185, 129, 1)' : 'rgb(79, 70, 229, 1)'
+            );
+
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChartInstance) {
+                priceChartInstance.destroy();
+            }
+
+            priceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Price (${chartData.length > 0 ? chartData[0].currency : '₹'})`,
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal bars for better readability of long platform names
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: `Price (${chartData.length > 0 ? chartData[0].currency : '₹'})`
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.x !== null) {
+                                        label += `${chartData[context.dataIndex].currency}${context.parsed.x.toLocaleString('en-IN')}`;
+                                    }
+                                    return label;
+                                },
+                                afterLabel: function(context) {
+                                    return `Reasoning: ${chartData[context.dataIndex].reasoning}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        /**
+         * Orchestrates the rendering of both the chart and the cards.
+         * @param {Array<Object>} pricesData - Array of price objects.
+         */
+        function renderResults(pricesData) {
+            let bestPrice = Infinity;
+            let bestPlatform = '';
+            
+            // 1. Determine the best price
+            pricesData.forEach(item => {
+                if (item.price !== null && typeof item.price === 'number' && item.price < bestPrice) {
+                    bestPrice = item.price;
+                    bestPlatform = item.platform;
+                }
+            });
+            
+            renderPriceChart(pricesData, bestPlatform, bestPrice);
+            renderPriceCardsView(pricesData, bestPlatform, bestPrice);
+            
+            resultsContainer.classList.remove('hidden');
+        }
+
+        // --- Main Logic ---
+
+        /**
+         * Performs the search, calls the LLM, and displays the results.
+         */
+        window.searchProduct = async function() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                showError("Please enter a product name to analyze prices.");
+                return;
+            }
+
+            clearResults();
+            setLoading(true);
+            queryDisplay.textContent = query;
+
+            try {
+                // --- FIRST API CALL: Get Structured Price Data (as parsable text) ---
+                const pricePayload = {
+                    contents: [{ parts: [{ text: `Find the *current and lowest* prices for the product "${query}" from the e-commerce platforms: ${TARGET_PLATFORMS}. For each platform, return data as a pipe-delimited list with exactly five columns: Platform, Price, Currency, Reasoning, URL. 
+                    
+                    IMPORTANT EXTRACTION RULES:
+                    1. PRICE: Search for the single, main numerical price. If found, include only the number (no symbols, no commas). If unavailable or out of stock, use the exact word 'null'.
+                    2. URL: If a numerical price is successfully found, the URL MUST be the full, direct HTTPS link to that specific product page. If Price is 'null', URL MUST be an empty string ('').
+                    3. REASONING: Explain briefly why the price was chosen or why it is 'null' (e.g., 'Out of stock', 'Lowest price on this site', 'Not sold here').
+
+                    Do NOT include a header row, markdown table delimiters (like '---'), or any explanatory text outside the pipe-delimited lines.` }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: "You are a price comparison data extractor. Your task is to perform a Google Search and return data strictly in the requested pipe-delimited text format: Platform | Price (number or null) | Currency (symbol) | Reasoning (short description) | URL (full, verifiable HTTPS link to the product page, or empty string)." }] },
+                };
+
+                const priceResponse = await fetchWithRetry(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pricePayload)
+                });
+                
+                const priceResult = await priceResponse.json();
+                const priceJsonText = priceResult?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!priceJsonText) {
+                    throw new Error("Could not extract price data from the API response. The search may have failed or no relevant prices were found.");
+                }
+
+                // Parse the pipe-delimited text into a structured JSON array
+                const pricesData = parsePriceData(priceJsonText);
+                
+                if (pricesData.length === 0) {
+                     // Check if the model returned an error message instead of data
+                     if (priceJsonText.includes("I cannot provide live price data") || priceJsonText.includes("unable to find")) {
+                         showError("The price data extraction failed. The model was unable to find or retrieve valid, parsable data for this query.");
+                     } else {
+                         showError("Price data was returned, but could not be parsed. Check the console for the raw response.");
+                     }
+                     throw new Error("Parsed zero price data points.");
+                }
+                
+                renderResults(pricesData);
+                
+                // --- SECOND API CALL: Generate Explanation Text ---
+                const explanationPrompt = `Analyze the following product price data for "${query}" (provided as a JSON string for context):\n\n${JSON.stringify(pricesData, null, 2)}\n\nBased on this data, provide a detailed, conversational explanation (1-2 paragraphs) for which platform offers the best overall deal (considering price, discounts, and included perks) and why. Use a friendly, AI-assistant tone.`;
+
+                const explanationPayload = {
+                    contents: [{ parts: [{ text: explanationPrompt }] }],
+                    tools: [{ "google_search": {} }], 
+                    systemInstruction: { parts: [{ text: "You are an expert e-commerce analyst. Provide a clear, insightful, and conversational summary of the best deal available for the product based on the provided JSON data." }] },
+                };
+
+                const explanationResponse = await fetchWithRetry(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(explanationPayload)
+                });
+
+                const explanationResult = await explanationResponse.json();
+                const explanationText = explanationResult?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (explanationText) {
+                    analysisText.innerHTML = explanationText.replace(/\n/g, '<br>');
+                    explanationContainer.classList.remove('hidden');
+
+                    // Extract and display grounding sources for the explanation
+                    const groundingMetadata = explanationResult?.candidates?.[0]?.groundingMetadata;
+                    const sources = groundingMetadata?.groundingAttributions
+                        ?.map(attr => attr.web)
+                        .filter(web => web?.uri && web?.title) || [];
+                    
+                    citationSection.innerHTML = formatCitations(sources);
+                }
+
+            } catch (error) {
+                console.error("Price Analysis Error:", error);
+                showError(`Failed to complete price analysis: ${error.message}. This is likely a model response or API key issue.`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // --- Exponential Backoff Retry Function for Fetch ---
+
+        /**
+         * Fetches data with exponential backoff for retries.
+         * @param {string} url - The API endpoint URL.
+         * @param {Object} options - Fetch options (method, headers, body).
+         * @param {number} retries - Current retry count.
+         * @returns {Promise<Response>} The response object.
+         */
+        async function fetchWithRetry(url, options, retries = 0) {
+            const maxRetries = 3;
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    if (response.status === 429 && retries < maxRetries) {
+                        const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return fetchWithRetry(url, options, retries + 1);
+                    }
+                    const errorJson = await response.json();
+                    throw new Error(errorJson.error?.message || `API request failed with status ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries < maxRetries) {
+                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries + 1);
+                }
+                throw error;
+            }
+        }
+
+        // Allow search on pressing Enter in the input field
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchProduct();
+            }
+        });
+
+    </script>
+</body>
+</html>
